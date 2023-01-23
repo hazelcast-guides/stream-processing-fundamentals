@@ -1,4 +1,6 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop.domain;
+
+import com.hazelcast.nio.serialization.compact.CompactSerializer;
 
 import java.util.Random;
 
@@ -104,4 +106,7 @@ public class MachineProfile {
         return result;
     }
 
+//    public static class Serializer implements CompactSerializer<MachineProfile> {
+//
+//    }
 }

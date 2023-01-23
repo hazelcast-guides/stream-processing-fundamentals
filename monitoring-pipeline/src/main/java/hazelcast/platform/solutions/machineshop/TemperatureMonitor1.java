@@ -1,14 +1,12 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.contrib.http.HttpListenerSources;
-import com.hazelcast.jet.datamodel.KeyedWindowResult;
-import com.hazelcast.jet.datamodel.Tuple2;
-import com.hazelcast.jet.datamodel.Tuple4;
 import com.hazelcast.jet.pipeline.*;
+import hazelcast.platform.solutions.machineshop.domain.MachineStatus;
+import hazelcast.platform.solutions.machineshop.domain.Names;
 
 public class TemperatureMonitor1 {
 

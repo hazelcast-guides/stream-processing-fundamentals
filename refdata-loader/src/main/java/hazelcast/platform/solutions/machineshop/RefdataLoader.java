@@ -1,9 +1,11 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
+import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
+import hazelcast.platform.solutions.machineshop.domain.Names;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,7 +41,7 @@ public class RefdataLoader {
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
             "'valueFormat' = 'compact'," +
-            "'valueCompactTypeName' = 'net.wrmay.jetdemo.MachineProfile')";
+            "'valueCompactTypeName' = 'hazelcast.platform.solutions.machineshop.domain.MachineProfile')";
     private static final String STATUS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.STATUS_MAP_NAME +
             " TYPE IMap OPTIONS (" +
             "'keyFormat' = 'varchar'," +

@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>net.wrmay.jetdemo</groupId>
-        <artifactId>jet-for-momitoring-and-control</artifactId>
+        <groupId>com.hazelcast.solutions</groupId>
+        <artifactId>stream-processing-fundamentals</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
     <artifactId>event-generator</artifactId>
@@ -18,7 +18,7 @@
             <version>${hazelcast.version}</version>
         </dependency>
         <dependency>
-            <groupId>net.wrmay.jetdemo</groupId>
+            <groupId>com.hazelcast.solutions</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -49,8 +49,9 @@
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>net.wrmay.jetdemo.EventGenerator</mainClass>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>hazelcast.platform.solutions.machineshop.EventGenerator</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

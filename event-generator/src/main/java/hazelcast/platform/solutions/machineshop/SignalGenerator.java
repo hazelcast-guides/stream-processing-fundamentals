@@ -1,4 +1,4 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop;
 
 import java.util.Random;
 

@@ -1,4 +1,4 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop.domain;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;

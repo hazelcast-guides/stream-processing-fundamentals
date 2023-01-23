@@ -1,7 +1,8 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import hazelcast.platform.solutions.machineshop.domain.MachineStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;

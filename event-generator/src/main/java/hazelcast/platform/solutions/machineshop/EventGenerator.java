@@ -1,4 +1,4 @@
-package net.wrmay.jetdemo;
+package hazelcast.platform.solutions.machineshop;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.client.HazelcastClient;
@@ -7,6 +7,8 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
+import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
+import hazelcast.platform.solutions.machineshop.domain.Names;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 
@@ -18,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-import static net.wrmay.jetdemo.Names.SPECIAL_SN;
+import static hazelcast.platform.solutions.machineshop.domain.Names.SPECIAL_SN;
 
 /**
  * Expects the following environment variables
