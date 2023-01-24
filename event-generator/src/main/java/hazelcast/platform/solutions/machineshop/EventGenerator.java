@@ -2,8 +2,11 @@ package hazelcast.platform.solutions.machineshop;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
+import com.hazelcast.map.listener.EntryAddedListener;
+import com.hazelcast.map.listener.EntryUpdatedListener;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
 import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
@@ -11,10 +14,9 @@ import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.solutions.machineshop.domain.Names;
 
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import static hazelcast.platform.solutions.machineshop.domain.Names.SPECIAL_SN;
 
@@ -44,7 +46,7 @@ public class EventGenerator {
     private static  HazelcastInstance hzClient;
     private static IMap<String, MachineProfile> machineProfileMap;
     private static IMap<String, MachineStatusEvent> machineEventMap;
-    private static IMap<String, String> machineControlMap;
+    private static final ConcurrentHashMap<String, MachineEmulator> machineEmulatorMap = new ConcurrentHashMap<>();
 
     private static String getRequiredProp(String propName) {
         String prop = System.getenv(propName);
@@ -94,7 +96,12 @@ public class EventGenerator {
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
         machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
         machineEventMap = hzClient.getMap(Names.EVENT_MAP_NAME);
-        machineControlMap = hzClient.getMap(Names.CONTROLS_MAP_NAME);
+
+        IMap<String, String> machineControlMap = hzClient.getMap(Names.CONTROLS_MAP_NAME);
+
+        // add an event listener on the machine control map
+        machineControlMap.addEntryListener(new MachineControlEventHandler(), true);
+
         Runtime.getRuntime().addShutdownHook(new Thread(hzClient::shutdown));
     }
     /**
@@ -149,7 +156,6 @@ public class EventGenerator {
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(16);
         Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
 
-        MachineEmulator[] machineEmulators = new MachineEmulator[machineCount];
         for (int j = 0; j < machineCount; ++j) {
             MachineProfile profile = machineProfileMap.get(serialNums[j]);
             if (profile == null) {
@@ -161,53 +167,78 @@ public class EventGenerator {
             float p = rand.nextFloat();
             if (p <= profile.getFaultyOdds()) {
                 // it's faulty
-                signalGen = new SignalGenerator(.7f * profile.getWarningTemp(), .25f, 2.0f);
+                signalGen = warmingSignalGenerator(.7f * profile.getWarningTemp());
             } else {
-                signalGen = new SignalGenerator(.7f * profile.getWarningTemp(), 0.0f, 2.0f);
+                signalGen = normalSignalGenerator(.7f * profile.getWarningTemp());
             }
-            machineEmulators[j] = new MachineEmulator(machineEventMap, serialNums[j], signalGen);
-            executor.scheduleAtFixedRate(machineEmulators[j], rand.nextInt(1000), 1000, TimeUnit.MILLISECONDS);
-        }
-//        try (Closer<ScheduledThreadPoolExecutor> threadPoolExecutorCloser = new Closer<>(executor, ScheduledThreadPoolExecutor::shutdown)) {
-//
-//        }
-//  The Hz Client will keep the process alive I think
-//            AtomicBoolean running = new AtomicBoolean(true);
-//
-//            Runtime.getRuntime().addShutdownHook(new Thread(() -> running.set(false)));
-//
-//            while (running.get()) {
-//                try {
-//                    Thread.sleep(2000);
-//                } catch (InterruptedException ix) {
-//                    break;
-//                }
-//            }
-//            System.out.println("Shutting down");
-    }
 
-    private static class Closer<T> implements AutoCloseable {
-        private final T client;
-        private final Consumer<T> closeFn;
-
-        public Closer(T hc, Consumer<T> closeFn) {
-            this.client = hc;
-            this.closeFn = closeFn;
-        }
-
-        @Override
-        public void close() {
-            closeFn.accept(client);
+            MachineEmulator emulator = new MachineEmulator(machineEventMap, serialNums[j], signalGen);
+            machineEmulatorMap.put(emulator.getSerialNum(), emulator);
+            executor.scheduleAtFixedRate(emulator, rand.nextInt(1000), 1000, TimeUnit.MILLISECONDS);
         }
     }
 
-    private static class DaemonThreadFactory implements ThreadFactory {
+    private static SignalGenerator warmingSignalGenerator(float startTemp){
+        return new SignalGenerator(startTemp, .25f, 2.0f);
+    }
+
+    private static SignalGenerator coolingSignalGenerator(float startTemp){
+        return new SignalGenerator(startTemp, -0.25f, 2.0f);
+    }
+
+    private static SignalGenerator normalSignalGenerator(float startTemp){
+        return new SignalGenerator(startTemp, 0.0f, 2.0f);
+    }
+
+    public static class MachineControlEventHandler
+            implements EntryUpdatedListener<String, String>, EntryAddedListener<String,String> {
+
+        private final Random rand = new Random();
 
         @Override
-        public Thread newThread(Runnable r) {
-            Thread result = new Thread(r);
-            result.setDaemon(true);
-            return result;
+        public void entryAdded(EntryEvent<String, String> event) {
+            if (event.getValue().equals("red")) handleRed(event.getKey());
         }
+
+        @Override
+        public void entryUpdated(EntryEvent<String, String> event) {
+            if (event.getValue().equals("green"))
+                handleGreen(event.getKey());
+            else if (event.getValue().equals("red"))
+                handleRed(event.getKey());
+        }
+
+        private  void handleRed(String sn){
+            System.out.println(sn + " went RED, reducing speed");
+            MachineEmulator machine = machineEmulatorMap.get(sn);
+            if (machine == null){
+                System.err.println("WARNING: No Emulator found for " + sn);
+            } else {
+                SignalGenerator sg = coolingSignalGenerator(machine.getCurrStatus().getBitTemp());
+                machine.setSignalGenerator(sg);
+            }
+        }
+
+        private  void handleGreen(String sn){
+            System.out.println(sn + " went GREEN, resuming normal speed");
+            MachineEmulator machine = machineEmulatorMap.get(sn);
+            if (machine == null){
+                System.err.println("WARNING: No Emulator found for " + sn);
+            } else {
+                MachineProfile profile = machineProfileMap.get(sn);
+                float pFaulty = .1f;
+                if (profile != null){
+                    pFaulty = profile.getFaultyOdds();
+                } else {
+                    System.err.println("WARNING: No machine profile found for: " + sn);
+                }
+
+                if (rand.nextFloat() <= pFaulty)
+                    machine.setSignalGenerator(warmingSignalGenerator(machine.getCurrStatus().getBitTemp()));
+                else
+                    machine.setSignalGenerator(normalSignalGenerator(machine.getCurrStatus().getBitTemp()));
+            }
+        }
+
     }
 }

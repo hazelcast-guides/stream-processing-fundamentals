@@ -14,6 +14,8 @@ public class MachineEmulator implements  Runnable{
     private int t;
     private SignalGenerator signalGenerator;
 
+    private MachineStatusEvent currStatus;
+
     public MachineEmulator(IMap<String,MachineStatusEvent> machineStatusMap, String sn, SignalGenerator signalGenerator){
         this.machineStatusMap = machineStatusMap;
         this.signalGenerator = signalGenerator;
@@ -21,20 +23,27 @@ public class MachineEmulator implements  Runnable{
         this.t = 0;
     }
 
-    public void setSignalGenerator(SignalGenerator signalGenerator){
+    public  synchronized void setSignalGenerator(SignalGenerator signalGenerator){
         this.signalGenerator = signalGenerator;
+        this.t = 0;
     }
     @Override
-    public void run() {
-        MachineStatusEvent status = new MachineStatusEvent();
-        status.setSerialNum(serialNum);
-        status.setEventTime(System.currentTimeMillis());
-        status.setBitTemp(signalGenerator.compute(t++));
-        status.setBitRPM(10000);
-        status.setBitPositionX(0);
-        status.setBitPositionY(0);
-        status.setBitPositionZ(0);
+    public synchronized void  run() {
+        currStatus = new MachineStatusEvent();
+        currStatus.setSerialNum(serialNum);
+        currStatus.setEventTime(System.currentTimeMillis());
+        currStatus.setBitTemp(signalGenerator.compute(t++));
+        currStatus.setBitRPM(10000);
+        currStatus.setBitPositionX(0);
+        currStatus.setBitPositionY(0);
+        currStatus.setBitPositionZ(0);
 
-        machineStatusMap.put(serialNum, status);
+        machineStatusMap.put(serialNum, currStatus);
     }
+
+    public MachineStatusEvent getCurrStatus(){
+        return currStatus;
+    }
+
+    public String getSerialNum() { return serialNum;}
 }
