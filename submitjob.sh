@@ -1,6 +1,6 @@
 #!/bin/bash
 docker compose exec cli hz-cli submit \
-    -c=net.wrmay.jetdemo.$1 \
+    -c=hazelcast.platform.solutions.machineshop.TemperatureMonitorPipeline \
     -t=dev@hz   \
     -n=temperature-monitor \
-    /project/temp-monitor/target/temp-monitor-1.0-SNAPSHOT.jar /project/logs
+    /project/monitoring-pipeline/target/monitoring-pipeline-1.0-SNAPSHOT.jar

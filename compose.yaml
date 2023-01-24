@@ -22,7 +22,7 @@ services:
 
   cli:
     image: hazelcast/hazelcast:5.2.1
-    command: hz-cli 
+    command: hz-cli
     volumes:
       - ".:/project"
     command: >
@@ -36,7 +36,8 @@ services:
     environment:
       HZ_SERVERS: hz
       HZ_CLUSTER_NAME: dev 
-      MACHINE_COUNT: 5
+      MACHINE_COUNT: 10
+      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
       - ".:/project"
     networks:
@@ -48,23 +49,21 @@ services:
     environment:
       HZ_SERVERS: hz
       HZ_CLUSTER_NAME: dev 
-      MACHINE_COUNT: 5
-      RUNHOT: false
-      TARGET_URL: http://hz:8080/
+      MACHINE_COUNT: 10
     volumes:
       - ".:/project"
     networks:
       - hznet
   
-  ui:
-    build: ./dash-image
-    command: python /project/ui/app.py 
-    ports:
-      - "8050:8050"
-    volumes:
-      - ".:/project"
-    networks:
-      - hznet
+#  ui:
+#    build: ./dash-image
+#    command: python /project/ui/app.py
+#    ports:
+#      - "8050:8050"
+#    volumes:
+#      - ".:/project"
+#    networks:
+#      - hznet
 
 
 networks:

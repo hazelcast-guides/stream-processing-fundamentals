@@ -1,15 +1,21 @@
 package hazelcast.platform.solutions.machineshop.domain;
 
+import com.hazelcast.nio.serialization.compact.CompactReader;
 import com.hazelcast.nio.serialization.compact.CompactSerializer;
+import com.hazelcast.nio.serialization.compact.CompactWriter;
 
 import java.util.Random;
 
 
 public class MachineProfile {
     private String serialNum;
+    private String location;
+
+    private String block;
+    private float faultyOdds;
     private String manufacturer;
-    private int warningTemp;
-    private int criticalTemp;
+    private short warningTemp;
+    private short criticalTemp;
     private int maxRPM;
 
     public String getSerialNum() {
@@ -28,19 +34,19 @@ public class MachineProfile {
         this.manufacturer = manufacturer;
     }
 
-    public int getWarningTemp() {
+    public short getWarningTemp() {
         return warningTemp;
     }
 
-    public void setWarningTemp(int warningTemp) {
+    public void setWarningTemp(short warningTemp) {
         this.warningTemp = warningTemp;
     }
 
-    public int getCriticalTemp() {
+    public short getCriticalTemp() {
         return criticalTemp;
     }
 
-    public void setCriticalTemp(int criticalTemp) {
+    public void setCriticalTemp(short criticalTemp) {
         this.criticalTemp = criticalTemp;
     }
 
@@ -52,6 +58,31 @@ public class MachineProfile {
         this.maxRPM = maxRPM;
     }
 
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public String getBlock() {
+        return block;
+    }
+
+    public void setBlock(String block) {
+        this.block = block;
+    }
+
+    public float getFaultyOdds() {
+        return faultyOdds;
+    }
+
+    public void setFaultyOdds(float faultyOdds) {
+        this.faultyOdds = faultyOdds;
+    }
+
+
     /////// for generating fake data
 
     private static final Random random = new Random();
@@ -62,7 +93,7 @@ public class MachineProfile {
 
     private static final int [] rpmLimits = new int[] {8000,10000,12000,20000,30000,40000};
 
-    private static final  int [] warningTemps = new int [] {100,150,210, 300};
+    private static final short[] warningTemps = new short[] {100,150,210, 300};
 
     private static String randomSN(){
         char [] result = new char[6];
@@ -74,7 +105,7 @@ public class MachineProfile {
     private static String randomCompany(){
         return companies[random.nextInt(companies.length)];
     }
-    private static int randomWarningTemp(){
+    private static short randomWarningTemp(){
         return warningTemps[random.nextInt(warningTemps.length)];
     }
 
@@ -83,30 +114,60 @@ public class MachineProfile {
     }
 
     // not thread safe
-    public static MachineProfile fake(){
+    public static MachineProfile fake(String location, String block, float pFaulty){
         MachineProfile result = new MachineProfile();
 
         result.setManufacturer(randomCompany());
         result.setSerialNum(randomSN());
+        result.setLocation(location);
+        result.setBlock(block);
+        result.setFaultyOdds(pFaulty);
         result.setWarningTemp(randomWarningTemp());
-        result.setCriticalTemp(result.warningTemp + 30);
-        result.setMaxRPM(randomMaxRPM());
-
-        return result;
-    }
-    public static MachineProfile special(){
-        MachineProfile result = new MachineProfile();
-
-        result.setManufacturer(randomCompany());
-        result.setSerialNum(Names.SPECIAL_SN);
-        result.setWarningTemp(200);
-        result.setCriticalTemp(240);
+        result.setCriticalTemp((short) (result.warningTemp + 30));
         result.setMaxRPM(randomMaxRPM());
 
         return result;
     }
 
-//    public static class Serializer implements CompactSerializer<MachineProfile> {
-//
-//    }
+    /*
+     * Although not required, explicit compact serializers provide the best performance.
+     */
+    public static class Serializer implements CompactSerializer<MachineProfile> {
+
+        @Override
+        public MachineProfile read(CompactReader reader) {
+            MachineProfile result = new MachineProfile();
+            result.setSerialNum(reader.readString("serial_num"));
+            result.setLocation(reader.readString("location"));
+            result.setBlock(reader.readString("block"));
+            result.setFaultyOdds(reader.readFloat32("faulty_odds"));
+            result.setManufacturer(reader.readString("manufacturer"));
+            result.setWarningTemp(reader.readInt16("warning_temp"));
+            result.setCriticalTemp(reader.readInt16("critical_temp"));
+            result.setMaxRPM(reader.readInt32("max_rpm"));
+            return result;
+        }
+
+        @Override
+        public void write(CompactWriter writer, MachineProfile object) {
+            writer.writeString("serial_num", object.getSerialNum());
+            writer.writeString("location", object.getLocation());
+            writer.writeString("block", object.getBlock());
+            writer.writeFloat32("faulty_odds", object.getFaultyOdds());
+            writer.writeString("manufacturer", object.getManufacturer());
+            writer.writeInt16("warning_temp", object.getWarningTemp());
+            writer.writeInt16("critical_temp", object.getCriticalTemp());
+            writer.writeInt32("max_rpm", object.getMaxRPM());
+        }
+
+        @Override
+        public String getTypeName() {
+            return "machine_profile";
+        }
+
+        @Override
+        public Class<MachineProfile> getCompactClass() {
+            return MachineProfile.class;
+        }
+    }
 }

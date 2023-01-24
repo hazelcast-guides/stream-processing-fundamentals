@@ -24,11 +24,6 @@
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.hazelcast.jet.contrib</groupId>
-            <artifactId>http</artifactId>
-            <version>0.2-SNAPSHOT</version>
-        </dependency>
     </dependencies>
 
     <build>

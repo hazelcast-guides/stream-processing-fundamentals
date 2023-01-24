@@ -2,12 +2,16 @@ package hazelcast.platform.solutions.machineshop;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
+import com.hazelcast.client.config.ClientConnectionStrategyConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
 import hazelcast.platform.solutions.machineshop.domain.Names;
 
+import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,30 +23,63 @@ import java.util.Map;
  * HZ_CLUSTER_NAME  The name of the Hazelcast cluster to connect.  Required.
  * <p>
  * MACHINE_COUNT The number of machines to load.
+ * 
+ * SIMULATOR_CONFIG_FILE The path to the simulator configuration
+ *
+ * We need a way to group machines so that when we try to view a graph, we are only looking at metrics
+ * from a subset.  At the same time, we don't want the data to be too sparse. Takes a csv fromatted config file that
+ * looks like this.  The fields are location, block and faulty percentage
+ * 
+ * Los Angeles,A,.9
+ * Los Angeles,B,0
+ * San Antonio,A,.9
+ * San Antonio,B,0
+ * 
  */
 public class RefdataLoader {
-    public static final String HZ_SERVERS_PROP = "HZ_SERVERS";
-    public static final String HZ_CLUSTER_NAME_PROP = "HZ_CLUSTER_NAME";
+    private static final String HZ_SERVERS_PROP = "HZ_SERVERS";
+    private static final String HZ_CLUSTER_NAME_PROP = "HZ_CLUSTER_NAME";
 
-    public static final String MACHINE_COUNT_PROP = "MACHINE_COUNT";
+    private static final String MACHINE_COUNT_PROP = "MACHINE_COUNT";
+
+    private static final String SIMULATOR_CONFIG_FILE_PROP = "SIMULATOR_CONFIG_FILE";
 
     private static String []hzServers;
     private static String hzClusterName;
 
     private static int machineCount;
 
-    private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
-            "criticalTemp INTEGER, " +
-            "manufacturer VARCHAR, " +
-            "maxRPM INTEGER, " +
+    private static final List<Profile> profiles = new ArrayList<>();
+
+    private static final String EVENT_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.EVENT_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
-            "warningTemp INTEGER) " +
+            "eventTime BIGINT, " +
+            "bitRPM INTEGER, " +
+            "bitTemp SMALLINT, " +
+            "bitPositionX INTEGER, " +
+            "bitPositionY INTEGER, " +
+            "bitPositionZ INTEGER) " +
+            "TYPE IMap OPTIONS (" +
+            "'keyFormat' = 'java'," +
+            "'keyJavaClass' = 'java.lang.String'," +
+            "'valueFormat' = 'compact'," +
+            "'valueCompactTypeName' = 'hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent')";
+
+    private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
+            "serialNum VARCHAR, " +
+            "location VARCHAR, " +
+            "block VARCHAR, " +
+            "faultyOdds REAL," +
+            "manufacturer VARCHAR, " +
+            "warningTemp SMALLINT, " +
+            "criticalTemp SMALLINT, " +
+            "maxRPM INTEGER) " +
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
             "'valueFormat' = 'compact'," +
             "'valueCompactTypeName' = 'hazelcast.platform.solutions.machineshop.domain.MachineProfile')";
-    private static final String STATUS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.STATUS_MAP_NAME +
+    private static final String CONTROLS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.CONTROLS_MAP_NAME +
             " TYPE IMap OPTIONS (" +
             "'keyFormat' = 'varchar'," +
             "'valueFormat' = 'varchar')";
@@ -75,19 +112,67 @@ public class RefdataLoader {
             System.err.println("Machine count must be between 1 and 1,000,000 inclusive");
             System.exit(1);
         }
+
+        String profileFileName = getRequiredProp(SIMULATOR_CONFIG_FILE_PROP);
+        File profileFile = new File(profileFileName);
+        if (!profileFile.isFile()){
+            System.err.println(profileFileName + " not found");
+            System.exit(1);
+        }
+
+
+        try(BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(profileFile)))){
+            String line = reader.readLine();
+            while(line != null){
+                if (line.length() == 0) {
+                    line = reader.readLine();
+                    continue;
+                }
+
+                String []words = line.split(",");
+                if (words.length != 3){
+                    System.err.println("WARNING: skipping unparseable line: " + line);
+                    reader.readLine();
+                    continue;
+                }
+
+                float pFaulty;
+                try {
+                    pFaulty = Float.parseFloat(words[2]);
+                } catch (NumberFormatException nfx){
+                    System.err.println("WARNING: skipping line containing unparseable number: " + line);
+                    line = reader.readLine();
+                    continue;
+                }
+
+                // finally, the error checking is done
+                profiles.add(new Profile(words[0], words[1], pFaulty));
+                line = reader.readLine();
+            }
+        } catch (IOException e) {
+            System.err.println("An error occurred while reading " + profileFileName);
+            e.printStackTrace(System.err);
+            System.exit(1);
+        }
     }
 
+    private static void doSQLMappings(HazelcastInstance hzClient){
+        hzClient.getSql().execute(PROFILE_MAPPING_SQL);
+        hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
+        hzClient.getSql().execute(EVENT_MAPPING_SQL);
+    }
     public static void main(String []args){
         configure();
 
         ClientConfig clientConfig = new ClientConfig();
         clientConfig.setClusterName(hzClusterName);
         clientConfig.getNetworkConfig().addAddress(hzServers);
+        clientConfig.getConnectionStrategyConfig().setAsyncStart(false);
+        clientConfig.getConnectionStrategyConfig().setReconnectMode(ClientConnectionStrategyConfig.ReconnectMode.ON);
 
         HazelcastInstance hzClient = HazelcastClient.newHazelcastClient(clientConfig);
 
-        hzClient.getSql().execute(PROFILE_MAPPING_SQL);
-        hzClient.getSql().execute(STATUS_MAPPING_SQL);
+        doSQLMappings(hzClient);
 
         Map<String, MachineProfile> batch = new HashMap<>();
         IMap<String, MachineProfile> machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
@@ -96,10 +181,11 @@ public class RefdataLoader {
         int toLoad = machineCount - existingEntries;
 
         if (toLoad <= 0){
-            System.out.println("" + existingEntries + "machine profiles are already present");
+            System.out.println("" + existingEntries + " machine profiles are already present");
         } else {
             for(int i=0; i < toLoad; ++i){
-                MachineProfile mp = MachineProfile.fake();
+                Profile p = profiles.get( i % profiles.size());
+                MachineProfile mp = MachineProfile.fake(p.location, p.block, p.faultyPercentage);
                 batch.put(mp.getSerialNum(), mp);
                 int BATCH_SIZE = 1000;
                 if (batch.size() == BATCH_SIZE){
@@ -114,12 +200,20 @@ public class RefdataLoader {
                 System.out.println("Loaded " + machineCount + " machine profiles");
             else
                 System.out.println("Loaded " + toLoad + " machine profiles bringing the total to " + machineCount);
-
-            // now add the "special" machine for the demo
-            MachineProfile mp = MachineProfile.special();
-            machineProfileMap.put(mp.getSerialNum(), mp);
         }
 
         hzClient.shutdown();
+    }
+
+    private static class Profile {
+        String location;
+        String block;
+        float faultyPercentage;
+
+        public Profile(String location, String block, float faultyPercentage) {
+            this.location = location;
+            this.block = block;
+            this.faultyPercentage = faultyPercentage;
+        }
     }
 }

@@ -9,6 +9,11 @@ import java.util.Random;
  * std. dev S
  *
  * The value will be calculated as a float and rounded to an integer.
+ *
+ * Any positive value of M (slope) will cause the value to rise over time and any negative value will cause
+ * it to fall.
+ *
+ * Note that this class has configuration, but no dynamic state.  It can be re-used in multiple emulators.
  */
 public class SignalGenerator {
     public SignalGenerator(float bias, float slope, float noiseSD) {
@@ -23,10 +28,10 @@ public class SignalGenerator {
     private final float noiseSD;
     private final Random rand;
 
-    public int compute(int t){
+    public short compute(int t){
         float noise = (float) rand.nextGaussian() * noiseSD;
         float result = bias + (float) t * slope + noise;
-        return (int) result;
+        return (short) result;
     }
 
 }
