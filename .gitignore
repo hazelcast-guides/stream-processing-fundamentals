@@ -1,5 +1,4 @@
-*.code-workspace
 target/
-.DS_Store
+*.iml
 .idea/
 __pycache__/

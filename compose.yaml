@@ -55,15 +55,13 @@ services:
     networks:
       - hznet
   
-#  ui:
-#    build: ./dash-image
-#    command: python /project/ui/app.py
-#    ports:
-#      - "8050:8050"
-#    volumes:
-#      - ".:/project"
-#    networks:
-#      - hznet
+  ui:
+    build: ./ui
+    environment:
+      HZ_SERVERS: hz
+      HZ_CLUSTER_NAME: dev
+    networks:
+      - hznet
 
 
 networks:

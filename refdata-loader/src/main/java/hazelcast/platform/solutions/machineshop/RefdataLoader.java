@@ -84,6 +84,11 @@ public class RefdataLoader {
             "'keyFormat' = 'varchar'," +
             "'valueFormat' = 'varchar')";
 
+    private static final String SYSTEM_ACTIVITIES_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.SYSTEM_ACTIVITIES_MAP_NAME +
+            " TYPE IMap OPTIONS (" +
+            "'keyFormat' = 'varchar'," +
+            "'valueFormat' = 'varchar')";
+
     private static String getRequiredProp(String propName){
         String prop = System.getenv(propName);
         if (prop == null){
@@ -160,6 +165,7 @@ public class RefdataLoader {
         hzClient.getSql().execute(PROFILE_MAPPING_SQL);
         hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
         hzClient.getSql().execute(EVENT_MAPPING_SQL);
+        hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
     }
     public static void main(String []args){
         configure();
@@ -176,6 +182,9 @@ public class RefdataLoader {
 
         Map<String, MachineProfile> batch = new HashMap<>();
         IMap<String, MachineProfile> machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
+        IMap<String, String> systemActivitiesMap = hzClient.getMap(Names.SYSTEM_ACTIVITIES_MAP_NAME);
+
+        systemActivitiesMap.put("LOADER_STATUS","STARTED");
 
         int existingEntries = machineProfileMap.size();
         int toLoad = machineCount - existingEntries;
@@ -201,7 +210,7 @@ public class RefdataLoader {
             else
                 System.out.println("Loaded " + toLoad + " machine profiles bringing the total to " + machineCount);
         }
-
+        systemActivitiesMap.put("LOADER_STATUS","FINISHED");
         hzClient.shutdown();
     }
 

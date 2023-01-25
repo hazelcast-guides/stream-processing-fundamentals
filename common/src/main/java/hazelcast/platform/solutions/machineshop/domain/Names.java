@@ -8,5 +8,5 @@ public class Names {
 
     public static final String CONTROLS_MAP_NAME = "machine_controls";
 
-    public static final String SPECIAL_SN = "HZ0001";
+    public static final String SYSTEM_ACTIVITIES_MAP_NAME = "system_activities";
 }

@@ -9,6 +9,7 @@ import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryUpdatedListener;
 import com.hazelcast.sql.SqlResult;
 import com.hazelcast.sql.SqlRow;
+import hazelcast.platform.solutions.MapWaiter;
 import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
 import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.solutions.machineshop.domain.Names;
@@ -17,8 +18,6 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import static hazelcast.platform.solutions.machineshop.domain.Names.SPECIAL_SN;
 
 /**
  * Expects the following environment variables
@@ -46,6 +45,8 @@ public class EventGenerator {
     private static  HazelcastInstance hzClient;
     private static IMap<String, MachineProfile> machineProfileMap;
     private static IMap<String, MachineStatusEvent> machineEventMap;
+
+    private static IMap<String, String> systemActivitiesMap;
     private static final ConcurrentHashMap<String, MachineEmulator> machineEmulatorMap = new ConcurrentHashMap<>();
 
     private static String getRequiredProp(String propName) {
@@ -96,6 +97,7 @@ public class EventGenerator {
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
         machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
         machineEventMap = hzClient.getMap(Names.EVENT_MAP_NAME);
+        systemActivitiesMap = hzClient.getMap(Names.SYSTEM_ACTIVITIES_MAP_NAME);
 
         IMap<String, String> machineControlMap = hzClient.getMap(Names.CONTROLS_MAP_NAME);
 
@@ -110,29 +112,16 @@ public class EventGenerator {
      * array.
      */
     private static void retrieveSerialNumbersFromHz(){
-
-        int existingEntries = machineProfileMap.size();
-
-        while (existingEntries < machineCount) {
-            System.out.println("waiting for at least " + machineCount + " machine profiles to be loaded");
-            try {
-                Thread.sleep(4000);
-            } catch (InterruptedException x) {
-                // ?
-            }
-            existingEntries = machineProfileMap.size();
+        MapWaiter<String, String> waiter = new MapWaiter<>(systemActivitiesMap, "LOADER_STATUS", "FINISHED");
+        if (!waiter.waitForSignal(3*60*1000)){
+           System.err.println("Timed out waiting for reference data loader to complete");
+           System.exit(1);
         }
-
-        // add some sleep to prevent the condition where the loader has not finished initializing the sql mapping
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException x) {
-            //
-        }
+        System.out.println("Reference data loader has finished.  Proceeding");
 
         // now we have sufficient profiles to start generating data
         serialNums = new String[machineCount];
-        try (SqlResult result = hzClient.getSql().execute("SELECT serialNum FROM " + Names.PROFILE_MAP_NAME + " WHERE serialNum != ? LIMIT ?", SPECIAL_SN, machineCount)) {
+        try (SqlResult result = hzClient.getSql().execute("SELECT serialNum FROM " + Names.PROFILE_MAP_NAME + "  LIMIT ?", machineCount)) {
             int i = 0;
             for (SqlRow row : result) {
                 serialNums[i++] = row.getObject(0);
