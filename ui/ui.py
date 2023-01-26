@@ -13,6 +13,7 @@ from hazelcast.proxy.base import EntryEvent
 from hazelcast.proxy.map import BlockingMap
 from hazelcast.serialization.api import Portable, PortableWriter, PortableReader
 
+
 # the following environment variables are required
 #
 # HZ_SERVERS
@@ -99,15 +100,18 @@ def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: f
 
 app = Dash(__name__)
 
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
-df = pd.DataFrame({
-    "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
-    "Amount": [4, 1, 2, 2, 4, 5],
-    "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
-})
+now = pd.Timestamp.now()
 
-fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
+d = {
+    "abc": pd.Series([101, 102, 103, 102, 101, 104, 108, 111], index=[now + pd.Timedelta(seconds=s) for s in range(8)]),
+    "def": pd.Series([101, 97, 104, 96], index=[now + pd.Timedelta(seconds=s) for s in range(0, 8, 2)])
+}
+pd.options.plotting.backend = "plotly"
+df = pd.DataFrame(d)
+df["def"].interpolate(inplace=True)
+print(df)
+
+fig = df.plot(template='plotly_dark')
 
 app.layout = html.Div(children=[
     html.H1(children='Hello Dash'),
