@@ -7,14 +7,13 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryUpdatedListener;
-import com.hazelcast.sql.SqlResult;
-import com.hazelcast.sql.SqlRow;
 import hazelcast.platform.solutions.MapWaiter;
 import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
 import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.solutions.machineshop.domain.Names;
 
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +39,7 @@ public class EventGenerator {
 
     private static int machineCount;
 
-    private static String[] serialNums;
+    private static Set<String> serialNums;
 
     private static  HazelcastInstance hzClient;
     private static IMap<String, MachineProfile> machineProfileMap;
@@ -93,6 +92,10 @@ public class EventGenerator {
         clientConfig.setClusterName(hzClusterName);
         for (String server: hzServers) clientConfig.getNetworkConfig().addAddress(server);
 
+        clientConfig.getSerializationConfig().getCompactSerializationConfig()
+                .addSerializer(new MachineProfile.Serializer())
+                .addSerializer(new MachineStatusEvent.Serializer());
+
 
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
         machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
@@ -120,16 +123,10 @@ public class EventGenerator {
         System.out.println("Reference data loader has finished.  Proceeding");
 
         // now we have sufficient profiles to start generating data
-        serialNums = new String[machineCount];
-        try (SqlResult result = hzClient.getSql().execute("SELECT serialNum FROM " + Names.PROFILE_MAP_NAME + "  LIMIT ?", machineCount)) {
-            int i = 0;
-            for (SqlRow row : result) {
-                serialNums[i++] = row.getObject(0);
-            }
-            if (i < machineCount) {
-                System.err.println("Could not retrieve sufficient profiles from the " + Names.PROFILE_MAP_NAME + " map.");
-                System.exit(1);
-            }
+        serialNums = machineProfileMap.keySet();
+        if (serialNums.size() < machineCount){
+            System.err.println("Could not retrieve sufficient profiles from the " + Names.PROFILE_MAP_NAME + " map.");
+            System.exit(1);
         }
     }
     public static void main(String[] args) {
@@ -145,10 +142,10 @@ public class EventGenerator {
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(16);
         Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
 
-        for (int j = 0; j < machineCount; ++j) {
-            MachineProfile profile = machineProfileMap.get(serialNums[j]);
+        for (String sn: serialNums) {
+            MachineProfile profile = machineProfileMap.get(sn);
             if (profile == null) {
-                System.err.println("Error: profile not found for " + serialNums[j] + " skipping this emulator");
+                System.err.println("Error: profile not found for " + sn + " skipping this emulator");
                 continue;
             }
 
@@ -161,7 +158,7 @@ public class EventGenerator {
                 signalGen = normalSignalGenerator(.7f * profile.getWarningTemp());
             }
 
-            MachineEmulator emulator = new MachineEmulator(machineEventMap, serialNums[j], signalGen);
+            MachineEmulator emulator = new MachineEmulator(machineEventMap, sn, signalGen);
             machineEmulatorMap.put(emulator.getSerialNum(), emulator);
             executor.scheduleAtFixedRate(emulator, rand.nextInt(1000), 1000, TimeUnit.MILLISECONDS);
         }

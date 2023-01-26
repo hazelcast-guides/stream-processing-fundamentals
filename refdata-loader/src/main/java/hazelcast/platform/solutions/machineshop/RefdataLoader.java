@@ -6,6 +6,7 @@ import com.hazelcast.client.config.ClientConnectionStrategyConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
+import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.solutions.machineshop.domain.Names;
 
 import java.io.*;
@@ -175,6 +176,10 @@ public class RefdataLoader {
         clientConfig.getNetworkConfig().addAddress(hzServers);
         clientConfig.getConnectionStrategyConfig().setAsyncStart(false);
         clientConfig.getConnectionStrategyConfig().setReconnectMode(ClientConnectionStrategyConfig.ReconnectMode.ON);
+        clientConfig.getSerializationConfig().getCompactSerializationConfig()
+                .addSerializer(new MachineStatusEvent.Serializer())
+                .addSerializer(new MachineProfile.Serializer());
+
 
         HazelcastInstance hzClient = HazelcastClient.newHazelcastClient(clientConfig);
 

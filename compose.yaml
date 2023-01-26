@@ -11,7 +11,7 @@ services:
       - hznet
 
   mc:
-    image: hazelcast/management-center:5.2.1 
+    image: hazelcast/management-center:5.2.1
     environment:
       MC_DEFAULT_CLUSTER: dev
       MC_DEFAULT_CLUSTER_MEMBERS: hz:5701
@@ -56,10 +56,13 @@ services:
       - hznet
   
   ui:
-    build: ./ui
+    build:
+      context: ./ui
     environment:
       HZ_SERVERS: hz
       HZ_CLUSTER_NAME: dev
+    ports:
+      - "8050:8050"
     networks:
       - hznet
 
