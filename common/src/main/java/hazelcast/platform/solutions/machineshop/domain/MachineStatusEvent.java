@@ -82,30 +82,30 @@ public class MachineStatusEvent {
                 '}';
     }
 
-    public static class MachineStatusEventSerializer implements CompactSerializer<MachineStatusEvent> {
+    public static class Serializer implements CompactSerializer<MachineStatusEvent> {
 
         @Override
         public MachineStatusEvent read(CompactReader reader) {
             MachineStatusEvent result = new MachineStatusEvent();
-            result.setSerialNum(reader.readString("serial_num"));
-            result.setEventTime(reader.readInt64("event_time"));
-            result.setBitRPM(reader.readInt32("bit_rpm"));
-            result.setBitTemp(reader.readInt16("bit_temp"));
-            result.setBitPositionX(reader.readInt32("bit_position_x"));
-            result.setBitPositionY(reader.readInt32("bit_position_y"));
-            result.setBitPositionZ(reader.readInt32("bit_position_z"));
+            result.setSerialNum(reader.readString("serialNum"));
+            result.setEventTime(reader.readInt64("eventTime"));
+            result.setBitRPM(reader.readInt32("bitRPM"));
+            result.setBitTemp(reader.readInt16("bitTemp"));
+            result.setBitPositionX(reader.readInt32("bitPositionX"));
+            result.setBitPositionY(reader.readInt32("bitPositionY"));
+            result.setBitPositionZ(reader.readInt32("bitPositionZ"));
             return result;
         }
 
         @Override
         public void write(CompactWriter writer, MachineStatusEvent object) {
-            writer.writeString("serial_num", object.getSerialNum());
-            writer.writeInt64("event_time", object.getEventTime());
-            writer.writeInt32("bit_rpm", object.getBitRPM());
-            writer.writeInt16("bit_temp", object.getBitTemp());
-            writer.writeInt32("bit_position_x", object.getBitPositionX());
-            writer.writeInt32("bit_position_y", object.getBitPositionY());
-            writer.writeInt32("bit_position_z", object.getBitPositionZ());
+            writer.writeString("serialNum", object.getSerialNum());
+            writer.writeInt64("eventTime", object.getEventTime());
+            writer.writeInt32("bitRPM", object.getBitRPM());
+            writer.writeInt16("bitTemp", object.getBitTemp());
+            writer.writeInt32("bitPositionX", object.getBitPositionX());
+            writer.writeInt32("bitPositionY", object.getBitPositionY());
+            writer.writeInt32("bitPositionZ", object.getBitPositionZ());
         }
 
         @Override

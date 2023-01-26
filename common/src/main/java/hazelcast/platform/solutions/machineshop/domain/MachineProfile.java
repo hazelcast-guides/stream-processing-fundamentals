@@ -137,27 +137,27 @@ public class MachineProfile {
         @Override
         public MachineProfile read(CompactReader reader) {
             MachineProfile result = new MachineProfile();
-            result.setSerialNum(reader.readString("serial_num"));
+            result.setSerialNum(reader.readString("serialNum"));
             result.setLocation(reader.readString("location"));
             result.setBlock(reader.readString("block"));
-            result.setFaultyOdds(reader.readFloat32("faulty_odds"));
+            result.setFaultyOdds(reader.readFloat32("faultyOdds"));
             result.setManufacturer(reader.readString("manufacturer"));
-            result.setWarningTemp(reader.readInt16("warning_temp"));
-            result.setCriticalTemp(reader.readInt16("critical_temp"));
-            result.setMaxRPM(reader.readInt32("max_rpm"));
+            result.setWarningTemp(reader.readInt16("warningTemp"));
+            result.setCriticalTemp(reader.readInt16("criticalTemp"));
+            result.setMaxRPM(reader.readInt32("maxRPM"));
             return result;
         }
 
         @Override
         public void write(CompactWriter writer, MachineProfile object) {
-            writer.writeString("serial_num", object.getSerialNum());
+            writer.writeString("serialNum", object.getSerialNum());
             writer.writeString("location", object.getLocation());
             writer.writeString("block", object.getBlock());
-            writer.writeFloat32("faulty_odds", object.getFaultyOdds());
+            writer.writeFloat32("faultyOdds", object.getFaultyOdds());
             writer.writeString("manufacturer", object.getManufacturer());
-            writer.writeInt16("warning_temp", object.getWarningTemp());
-            writer.writeInt16("critical_temp", object.getCriticalTemp());
-            writer.writeInt32("max_rpm", object.getMaxRPM());
+            writer.writeInt16("warningTemp", object.getWarningTemp());
+            writer.writeInt16("criticalTemp", object.getCriticalTemp());
+            writer.writeInt32("maxRPM", object.getMaxRPM());
         }
 
         @Override
