@@ -3,20 +3,22 @@ import os
 import sys
 import threading
 
-import hazelcast.predicate
+import hazelcast
+from dash import Dash, html, dcc
+import plotly.express as px
+import pandas as pd
 from hazelcast import HazelcastClient
 from hazelcast.config import ReconnectMode
 from hazelcast.proxy.base import EntryEvent
 from hazelcast.proxy.map import BlockingMap
-from hazelcast.serialization.api import Portable, PortableWriter, \
-    PortableReader
-
+from hazelcast.serialization.api import Portable, PortableWriter, PortableReader
 
 # the following environment variables are required
 #
 # HZ_SERVERS
 # HZ_CLUSTER_NAME
 #
+
 
 class MachineStatusEvent(Portable):
     ID = 2
@@ -95,33 +97,30 @@ def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: f
     return done.wait(timeout)
 
 
-# Run this app with `python app.py` and
-# visit http://127.0.0.1:8050/ in your web browser.
+app = Dash(__name__)
 
-# app = Dash(__name__)
-#
-# # assume you have a "long-form" data frame
-# # see https://plotly.com/python/px-arguments/ for more options
-# df = pd.DataFrame({
-#     "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
-#     "Amount": [4, 1, 2, 2, 4, 5],
-#     "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
-# })
-#
-# fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
-#
-# app.layout = html.Div(children=[
-#     html.H1(children='Hello Dash'),
-#
-#     html.Div(children='''
-#         Dash: A web application framework for your data.
-#     '''),
-#
-#     dcc.Graph(
-#         id='example-graph',
-#         figure=fig
-#     )
-# ])
+# assume you have a "long-form" data frame
+# see https://plotly.com/python/px-arguments/ for more options
+df = pd.DataFrame({
+    "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
+    "Amount": [4, 1, 2, 2, 4, 5],
+    "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
+})
+
+fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
+
+app.layout = html.Div(children=[
+    html.H1(children='Hello Dash'),
+
+    html.Div(children='''
+        Dash: A web application framework for your data.
+    '''),
+
+    dcc.Graph(
+        id='example-graph',
+        figure=fig
+    )
+])
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
@@ -137,7 +136,6 @@ if __name__ == '__main__':
         }
     )
     print('Connected to Hazelcast', flush=True)
-
     machine_controls_map = hz.get_map('machine_controls').blocking()
     event_map = hz.get_map('machine_events').blocking()
     system_activities_map = hz.get_map('system_activities').blocking()
@@ -161,6 +159,4 @@ if __name__ == '__main__':
 
     print("Listener added", flush=True)
 
-    the_end = threading.Event()
-    the_end.wait()
-    # app.run_server(debug=True)
+    app.run_server(debug=True)
