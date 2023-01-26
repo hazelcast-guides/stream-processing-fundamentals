@@ -9,8 +9,7 @@ import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple4;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.map.IMap;
-import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
-import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
+import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
 import hazelcast.platform.solutions.machineshop.domain.Names;
 
 import java.util.Map;
@@ -33,27 +32,27 @@ public class TemperatureMonitorPipeline {
         Pipeline pipeline = Pipeline.create();
 
         // create a stream of MachineStatusEvent events from the map journal, use the timestamps embedded in the events
-        StreamStage<Map.Entry<String, MachineStatusEvent>> statusEvents = pipeline.readFrom(
-                        Sources.<String, MachineStatusEvent>mapJournal(
+        StreamStage<Map.Entry<String, GenericRecord>> statusEvents = pipeline.readFrom(
+                        Sources.<String, GenericRecord>mapJournal(
                                 Names.EVENT_MAP_NAME,
                                 JournalInitialPosition.START_FROM_OLDEST))
-                .withTimestamps(item -> item.getValue().getEventTime(), 1000)
+                .withTimestamps(item -> item.getValue().getInt64("eventTime"), 1000)
                 .setName("machine status events");
 
         // split the events by serial number, create a tumbling window to calculate avg. temp over 10s
         // output is a tuple: serial number, avg temp
         StreamStage<KeyedWindowResult<String, Double>> averageTemps = statusEvents
-                .groupingKey( entry -> entry.getValue().getSerialNum())
+                .groupingKey( entry -> entry.getValue().getString("serialNum"))
                 .window(WindowDefinition.tumbling(10000))
-                .aggregate(AggregateOperations.averagingLong( item -> item.getValue().getBitTemp()))
-                .setName("Average Temp");
+                .aggregate(AggregateOperations.averagingLong( item -> item.getValue().getInt16("bitTemp")))
+                .setName("Average Temp").peek();
 
         // look up the machine profile for this machine, copy the warning temp onto the event
         // the output is serial number, avg temp, warning temp, critical temp
         StreamStage<Tuple4<String, Double, Short, Short>> temperaturesAndLimits =
-                averageTemps.groupingKey(KeyedWindowResult::getKey).
-                <MachineProfile, Tuple4<String, Double, Short, Short>>mapUsingIMap(Names.PROFILE_MAP_NAME,
-                (window, machineProfile) -> Tuple4.tuple4(window.getKey(), window.getValue(), machineProfile.getWarningTemp(), machineProfile.getCriticalTemp()))
+                averageTemps.groupingKey(KeyedWindowResult::getKey)
+                        .<GenericRecord, Tuple4<String, Double, Short, Short>>mapUsingIMap(Names.PROFILE_MAP_NAME,
+                (window, mp) -> Tuple4.tuple4(window.getKey(), window.getValue(), mp.getInt16("warningTemp"), mp.getInt16("criticalTemp")))
                 .setName("Lookup Temp Limits");
 
         // categorize as GREEN / ORANGE / RED, output is serial number, category
