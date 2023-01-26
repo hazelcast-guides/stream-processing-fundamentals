@@ -1,10 +1,15 @@
 package hazelcast.platform.solutions.machineshop.domain;
 
+import com.hazelcast.nio.serialization.Portable;
+import com.hazelcast.nio.serialization.PortableReader;
+import com.hazelcast.nio.serialization.PortableWriter;
 import com.hazelcast.nio.serialization.compact.CompactReader;
 import com.hazelcast.nio.serialization.compact.CompactSerializer;
 import com.hazelcast.nio.serialization.compact.CompactWriter;
 
-public class MachineStatusEvent {
+import java.io.IOException;
+
+public class MachineStatusEvent implements Portable {
     private String serialNum;
     private long eventTime;
     private int bitRPM;
@@ -82,40 +87,37 @@ public class MachineStatusEvent {
                 '}';
     }
 
-    public static class Serializer implements CompactSerializer<MachineStatusEvent> {
-
-        @Override
-        public MachineStatusEvent read(CompactReader reader) {
-            MachineStatusEvent result = new MachineStatusEvent();
-            result.setSerialNum(reader.readString("serialNum"));
-            result.setEventTime(reader.readInt64("eventTime"));
-            result.setBitRPM(reader.readInt32("bitRPM"));
-            result.setBitTemp(reader.readInt16("bitTemp"));
-            result.setBitPositionX(reader.readInt32("bitPositionX"));
-            result.setBitPositionY(reader.readInt32("bitPositionY"));
-            result.setBitPositionZ(reader.readInt32("bitPositionZ"));
-            return result;
-        }
-
-        @Override
-        public void write(CompactWriter writer, MachineStatusEvent object) {
-            writer.writeString("serialNum", object.getSerialNum());
-            writer.writeInt64("eventTime", object.getEventTime());
-            writer.writeInt32("bitRPM", object.getBitRPM());
-            writer.writeInt16("bitTemp", object.getBitTemp());
-            writer.writeInt32("bitPositionX", object.getBitPositionX());
-            writer.writeInt32("bitPositionY", object.getBitPositionY());
-            writer.writeInt32("bitPositionZ", object.getBitPositionZ());
-        }
-
-        @Override
-        public String getTypeName() {
-            return "machine_status_event";
-        }
-
-        @Override
-        public Class<MachineStatusEvent> getCompactClass() {
-            return MachineStatusEvent.class;
-        }
+    @Override
+    public int getFactoryId() {
+        return MachineShopPortableFactory.ID;
     }
+
+    public static final int ID= 2;
+    @Override
+    public int getClassId() {
+        return MachineStatusEvent.ID;
+    }
+
+    @Override
+    public void writePortable(PortableWriter writer) throws IOException {
+        writer.writeString("serialNum", this.serialNum);
+        writer.writeLong("eventTime", this.eventTime);
+        writer.writeInt("bitRPM", this.bitRPM);
+        writer.writeShort("bitTemp", this.bitTemp);
+        writer.writeInt("bitPositionX", this.bitPositionX);
+        writer.writeInt("bitPositionY", this.bitPositionY);
+        writer.writeInt("bitPositionZ", this.bitPositionZ);
+    }
+
+    @Override
+    public void readPortable(PortableReader reader) throws IOException {
+        this.serialNum = reader.readString("serialNum");
+        this.eventTime = reader.readLong("eventTime");
+        this.bitRPM = reader.readInt("bitRPM");
+        this.bitTemp = reader.readShort("bitTemp");
+        this.bitPositionX = reader.readInt("bitPositionX");
+        this.bitPositionY = reader.readInt("bitPositionY");
+        this.bitPositionZ = reader.readInt("bitPositionZ");
+    }
+
 }

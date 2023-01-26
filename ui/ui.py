@@ -1,14 +1,15 @@
+import logging
 import os
 import sys
 import threading
-import time
 
+import hazelcast.predicate
 from hazelcast import HazelcastClient
 from hazelcast.config import ReconnectMode
 from hazelcast.proxy.base import EntryEvent
 from hazelcast.proxy.map import BlockingMap
-from hazelcast.serialization.api import CompactSerializer, CompactReader, CompactWriter
-import hazelcast.predicate
+from hazelcast.serialization.api import Portable, PortableWriter, \
+    PortableReader
 
 
 # the following environment variables are required
@@ -17,7 +18,9 @@ import hazelcast.predicate
 # HZ_CLUSTER_NAME
 #
 
-class MachineStatusEvent:
+class MachineStatusEvent(Portable):
+    ID = 2
+
     def __init__(self):
         self.serial_num = ""
         self.event_time = 0
@@ -27,33 +30,32 @@ class MachineStatusEvent:
         self.bit_position_y = 0
         self.bit_position_z = 0
 
+    def write_portable(self, writer: PortableWriter) -> None:
+        writer.write_string("serialNum", self.serial_num)
+        writer.write_long("eventTime", self.event_time)
+        writer.write_int("bitRPM", self.bit_rpm)
+        writer.write_short("bitTemp", self.bit_temp)
+        writer.write_int("bitPositionX", self.bit_position_x)
+        writer.write_int("bitPositionY", self.bit_position_y)
+        writer.write_int("bitPositionZ", self.bit_position_z)
 
-class MachineStatusEventSerializer(CompactSerializer[MachineStatusEvent]):
-    def read(self, reader: CompactReader) -> MachineStatusEvent:
-        mse = MachineStatusEvent()
-        mse.serial_num = reader.read_string("serialNum")
-        mse.event_time = reader.read_int64("eventTime")
-        mse.bit_rpm = reader.read_int32("bitRPM")
-        mse.bit_temp = reader.read_int16("bitTemp")
-        mse.bit_position_x = reader.read_int32("bitPositionX")
-        mse.bit_position_y = reader.read_int32("bitPositionY")
-        mse.bit_position_z = reader.read_int32("bitPositionZ")
-        return mse
+    def read_portable(self, reader: PortableReader) -> None:
+        self.serial_num = reader.read_string("serialNum")
+        self.event_time = reader.read_long("eventTime")
+        self.bit_rpm = reader.read_int("bitRPM")
+        self.bit_temp = reader.read_short("bitTemp")
+        self.bit_position_x = reader.read_int("bitPositionX")
+        self.bit_position_y = reader.read_int("bitPositionY")
+        self.bit_position_z = reader.read_int("bitPositionZ")
 
-    def write(self, writer: CompactWriter, event: MachineStatusEvent) -> None:
-        writer.write_string("serialNum", event.serial_num)
-        writer.write_int64("eventTime", event.event_time)
-        writer.write_int32("bitRPM", event.bit_rpm)
-        writer.write_int16("bitTemp", event.bit_temp)
-        writer.write_int32("bitPositionX", event.bit_position_x)
-        writer.write_int32("bitPositionY", event.bit_position_y)
-        writer.write_int32("bitPositionZ", event.bit_position_z)
+    def get_factory_id(self) -> int:
+        return 1
 
-    def get_type_name(self) -> str:
-        return "machine_status_event"
+    def get_class_id(self) -> int:
+        return MachineStatusEvent.ID
 
-    def get_class(self):
-        return MachineStatusEvent
+
+portable_factory = {MachineStatusEvent.ID: MachineStatusEvent}
 
 
 def get_required_env(name: str) -> str:
@@ -74,7 +76,7 @@ def wait_map_listener_fun(expected_val: str, done: threading.Event):
 
 
 def logging_entry_listener(entry: EntryEvent):
-    print(f'GOT {entry.key}:{entry.value}', flush=True)
+    print(f'GOT {entry.key}: {entry.value.bit_temp}', flush=True)
 
 
 def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: float) -> bool:
@@ -93,40 +95,36 @@ def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: f
     return done.wait(timeout)
 
 
-
 # Run this app with `python app.py` and
 # visit http://127.0.0.1:8050/ in your web browser.
 
-from dash import Dash, html, dcc
-import plotly.express as px
-import pandas as pd
-
-app = Dash(__name__)
-
-# assume you have a "long-form" data frame
-# see https://plotly.com/python/px-arguments/ for more options
-df = pd.DataFrame({
-    "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
-    "Amount": [4, 1, 2, 2, 4, 5],
-    "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
-})
-
-fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
-
-app.layout = html.Div(children=[
-    html.H1(children='Hello Dash'),
-
-    html.Div(children='''
-        Dash: A web application framework for your data.
-    '''),
-
-    dcc.Graph(
-        id='example-graph',
-        figure=fig
-    )
-])
+# app = Dash(__name__)
+#
+# # assume you have a "long-form" data frame
+# # see https://plotly.com/python/px-arguments/ for more options
+# df = pd.DataFrame({
+#     "Fruit": ["Apples", "Oranges", "Bananas", "Apples", "Oranges", "Bananas"],
+#     "Amount": [4, 1, 2, 2, 4, 5],
+#     "City": ["SF", "SF", "SF", "Montreal", "Montreal", "Montreal"]
+# })
+#
+# fig = px.bar(df, x="Fruit", y="Amount", color="City", barmode="group")
+#
+# app.layout = html.Div(children=[
+#     html.H1(children='Hello Dash'),
+#
+#     html.Div(children='''
+#         Dash: A web application framework for your data.
+#     '''),
+#
+#     dcc.Graph(
+#         id='example-graph',
+#         figure=fig
+#     )
+# ])
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     hz_cluster_name = get_required_env('HZ_CLUSTER_NAME')
     hz_servers = get_required_env('HZ_SERVERS').split(',')
     hz = HazelcastClient(
@@ -134,7 +132,9 @@ if __name__ == '__main__':
         cluster_members=hz_servers,
         async_start=False,
         reconnect_mode=ReconnectMode.ON,
-        compact_serializers=[MachineStatusEventSerializer()]
+        portable_factories={
+            1: portable_factory
+        }
     )
     print('Connected to Hazelcast', flush=True)
 
@@ -161,4 +161,6 @@ if __name__ == '__main__':
 
     print("Listener added", flush=True)
 
-    app.run_server(debug=True)
+    the_end = threading.Event()
+    the_end.wait()
+    # app.run_server(debug=True)

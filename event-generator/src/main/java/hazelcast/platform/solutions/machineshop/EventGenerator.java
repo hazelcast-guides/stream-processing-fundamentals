@@ -9,6 +9,7 @@ import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryUpdatedListener;
 import hazelcast.platform.solutions.MapWaiter;
 import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
+import hazelcast.platform.solutions.machineshop.domain.MachineShopPortableFactory;
 import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.solutions.machineshop.domain.Names;
 
@@ -92,9 +93,9 @@ public class EventGenerator {
         clientConfig.setClusterName(hzClusterName);
         for (String server: hzServers) clientConfig.getNetworkConfig().addAddress(server);
 
-        clientConfig.getSerializationConfig().getCompactSerializationConfig()
-                .addSerializer(new MachineProfile.Serializer())
-                .addSerializer(new MachineStatusEvent.Serializer());
+        // configure portable serialization
+        clientConfig.getSerializationConfig().getPortableFactories().
+                put(MachineShopPortableFactory.ID, new MachineShopPortableFactory());
 
 
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
