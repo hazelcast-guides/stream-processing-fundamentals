@@ -108,7 +108,7 @@ def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: f
     return done.wait(timeout)
 
 
-app = Dash(__name__)
+app = Dash(__name__, external_stylesheets=['https://fonts.googleapis.com/css?family=Raleway:400,300,600'])
 
 now = pd.Timestamp.now()
 
@@ -118,28 +118,34 @@ df = pd.DataFrame()
 fig = df.plot(template='seaborn')
 
 
-@app.callback(Output('example-graph', 'figure'), Input('timer', 'n_intervals'))
+@app.callback(Output('main-graph', 'figure'), Input('timer', 'n_intervals'))
 def update(n: int):
     global df
     newdf = data_bucket.harvest()
-    # print(newdf)
+    print(newdf)
     df = pd.concat([df, newdf])
     df.interpolate(inplace=True)
     return df.plot(template='seaborn')  # seaborn, plotly_dark
 
 
 app.layout = html.Div(children=[
-    html.H1(children='Hello Dash'),
-
-    html.Div(children='''
-        Dash: A web application framework for your data.
-    '''),
+    html.H1(children='Hazelcast Machine Shop Monitor'),
     dcc.Graph(
-        id='example-graph',
+        id='main-graph',
         figure=fig
     ),
+    html.Div(children=[
+        html.Div(className='six columns', children=[
+            html.Label(children="Location", htmlFor='location_input'),
+            dcc.Input(id='location_input', value='', type='text'),
+        ]),
+        html.Div(className='six columns', children=[
+            html.Label(children="Block", htmlFor='block_input'),
+            dcc.Input(id='block_input', value='', type='text'),
+        ])
+    ], className="row"),
     dcc.Interval(id="timer", interval=5 * 1000, n_intervals=0)
-])
+], className='container')
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

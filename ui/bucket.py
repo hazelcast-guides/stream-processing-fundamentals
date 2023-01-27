@@ -20,7 +20,7 @@ class Bucket:
             temps.append(temp)
 
             # this rounding to the nearest second on purpose to
-            # helo the data align better
+            # help the data align better
             times.append(pd.to_datetime(int(event_epoch_time/1000), unit='s'))
 
     def harvest(self) -> pd.DataFrame:
