@@ -115,7 +115,7 @@ now = pd.Timestamp.now()
 pd.options.plotting.backend = "plotly"
 
 df = pd.DataFrame()
-fig = df.plot(template='plotly_dark')
+fig = df.plot(template='seaborn')
 
 
 @app.callback(Output('example-graph', 'figure'), Input('timer', 'n_intervals'))
@@ -125,7 +125,7 @@ def update(n: int):
     # print(newdf)
     df = pd.concat([df, newdf])
     df.interpolate(inplace=True)
-    return df.plot(template='plotly_white')  # seaborn, plotly_dark
+    return df.plot(template='seaborn')  # seaborn, plotly_dark
 
 
 app.layout = html.Div(children=[
@@ -138,7 +138,7 @@ app.layout = html.Div(children=[
         id='example-graph',
         figure=fig
     ),
-    dcc.Interval(id="timer", interval=4 * 1000, n_intervals=0)
+    dcc.Interval(id="timer", interval=5 * 1000, n_intervals=0)
 ])
 
 if __name__ == '__main__':

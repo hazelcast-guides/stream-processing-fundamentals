@@ -166,11 +166,11 @@ public class EventGenerator {
     }
 
     private static SignalGenerator warmingSignalGenerator(float startTemp){
-        return new SignalGenerator(startTemp, .25f, 2.0f);
+        return new SignalGenerator(startTemp, .8f, 2.0f);
     }
 
     private static SignalGenerator coolingSignalGenerator(float startTemp){
-        return new SignalGenerator(startTemp, -0.25f, 2.0f);
+        return new SignalGenerator(startTemp, -1.2f, 2.0f);
     }
 
     private static SignalGenerator normalSignalGenerator(float startTemp){

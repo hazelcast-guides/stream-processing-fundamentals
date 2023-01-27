@@ -97,7 +97,7 @@ public class MachineProfile implements Portable {
 
     private static final int [] rpmLimits = new int[] {8000,10000,12000,20000,30000,40000};
 
-    private static final short[] warningTemps = new short[] {100,150,210, 300};
+    private static final short[] warningTemps = new short[] {100,150,210, 240};
 
     private static String randomSN(){
         char [] result = new char[6];
@@ -127,7 +127,7 @@ public class MachineProfile implements Portable {
         result.setBlock(block);
         result.setFaultyOdds(pFaulty);
         result.setWarningTemp(randomWarningTemp());
-        result.setCriticalTemp((short) (result.warningTemp + 30));
+        result.setCriticalTemp((short) (result.warningTemp + 60));
         result.setMaxRPM(randomMaxRPM());
 
         return result;

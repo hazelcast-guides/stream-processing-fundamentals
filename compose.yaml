@@ -7,8 +7,6 @@ services:
       CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
-    ports:
-      - "5701:5701"
     networks:
       - hznet
 
