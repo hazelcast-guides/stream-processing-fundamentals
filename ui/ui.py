@@ -122,10 +122,10 @@ fig = df.plot(template='plotly_dark')
 def update(n: int):
     global df
     newdf = data_bucket.harvest()
-    # print(newdf)
-    df = pd.concat([df, newdf])
-    df.interpolate(inplace=True)
-    return df.plot(template='plotly_white')  # seaborn, plotly_dark
+    df = df.combine_first(newdf)
+    print(f'DF {df}', flush=True)
+    # df.interpolate(inplace=True)
+    return df.plot(template='plotly_dark')  # seaborn, plotly_dark, plotly_white
 
 
 app.layout = html.Div(children=[
