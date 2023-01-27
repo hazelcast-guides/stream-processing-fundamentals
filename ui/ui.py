@@ -5,13 +5,15 @@ import threading
 
 import hazelcast
 from dash import Dash, html, dcc
-import plotly.express as px
+from dash.dependencies import Input, Output
 import pandas as pd
 from hazelcast import HazelcastClient
 from hazelcast.config import ReconnectMode
 from hazelcast.proxy.base import EntryEvent
 from hazelcast.proxy.map import BlockingMap
 from hazelcast.serialization.api import Portable, PortableWriter, PortableReader
+
+import bucket
 
 
 # the following environment variables are required
@@ -82,6 +84,14 @@ def logging_entry_listener(entry: EntryEvent):
     print(f'GOT {entry.key}: {entry.value.bit_temp}', flush=True)
 
 
+data_bucket = bucket.Bucket()
+
+
+def collecting_entry_listener(entry: EntryEvent[str, MachineStatusEvent]):
+    global data_bucket
+    data_bucket.add(entry.key, entry.value.bit_temp, entry.value.event_time)
+
+
 def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: float) -> bool:
     done = threading.Event()
     imap.add_entry_listener(
@@ -102,16 +112,21 @@ app = Dash(__name__)
 
 now = pd.Timestamp.now()
 
-d = {
-    "abc": pd.Series([101, 102, 103, 102, 101, 104, 108, 111], index=[now + pd.Timedelta(seconds=s) for s in range(8)]),
-    "def": pd.Series([101, 97, 104, 96], index=[now + pd.Timedelta(seconds=s) for s in range(0, 8, 2)])
-}
 pd.options.plotting.backend = "plotly"
-df = pd.DataFrame(d)
-df["def"].interpolate(inplace=True)
-print(df)
 
+df = pd.DataFrame()
 fig = df.plot(template='plotly_dark')
+
+
+@app.callback(Output('example-graph', 'figure'), Input('timer', 'n_intervals'))
+def update(n: int):
+    global df
+    newdf = data_bucket.harvest()
+    # print(newdf)
+    df = pd.concat([df, newdf])
+    df.interpolate(inplace=True)
+    return df.plot(template='plotly_dark')
+
 
 app.layout = html.Div(children=[
     html.H1(children='Hello Dash'),
@@ -119,11 +134,11 @@ app.layout = html.Div(children=[
     html.Div(children='''
         Dash: A web application framework for your data.
     '''),
-
     dcc.Graph(
         id='example-graph',
         figure=fig
-    )
+    ),
+    dcc.Interval(id="timer", interval=4 * 1000, n_intervals=0)
 ])
 
 if __name__ == '__main__':
@@ -158,8 +173,8 @@ if __name__ == '__main__':
     event_map.add_entry_listener(
         include_value=True,
         predicate=hazelcast.predicate.sql(query),
-        added_func=logging_entry_listener,
-        updated_func=logging_entry_listener)
+        added_func=collecting_entry_listener,
+        updated_func=collecting_entry_listener)
 
     print("Listener added", flush=True)
 
