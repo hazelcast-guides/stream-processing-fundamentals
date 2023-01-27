@@ -122,8 +122,10 @@ fig = df.plot(template='seaborn')
 def update(n: int):
     global df
     newdf = data_bucket.harvest()
-    print(newdf)
+    # print(newdf)
     df = pd.concat([df, newdf])
+
+    # crucial because the time series don't align , without this there are gaps in the lines
     df.interpolate(inplace=True)
     return df.plot(template='seaborn')  # seaborn, plotly_dark
 
@@ -134,16 +136,10 @@ app.layout = html.Div(children=[
         id='main-graph',
         figure=fig
     ),
-    html.Div(children=[
-        html.Div(className='six columns', children=[
-            html.Label(children="Location", htmlFor='location_input'),
-            dcc.Input(id='location_input', value='', type='text'),
-        ]),
-        html.Div(className='six columns', children=[
-            html.Label(children="Block", htmlFor='block_input'),
-            dcc.Input(id='block_input', value='', type='text'),
-        ])
-    ], className="row"),
+    html.Label(children="Location", htmlFor='location_input'),
+    dcc.Input(id='location_input', value='', type='text'),
+    html.Label(children="Block", htmlFor='block_input'),
+    dcc.Input(id='block_input', value='', type='text'),
     dcc.Interval(id="timer", interval=5 * 1000, n_intervals=0)
 ], className='container')
 
