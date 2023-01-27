@@ -125,7 +125,7 @@ def update(n: int):
     # print(newdf)
     df = pd.concat([df, newdf])
     df.interpolate(inplace=True)
-    return df.plot(template='plotly_dark')
+    return df.plot(template='plotly_white')  # seaborn, plotly_dark
 
 
 app.layout = html.Div(children=[
@@ -178,4 +178,4 @@ if __name__ == '__main__':
 
     print("Listener added", flush=True)
 
-    app.run_server(debug=True)
+    app.run_server(host='0.0.0.0', debug=True)

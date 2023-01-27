@@ -7,6 +7,8 @@ services:
       CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
+    ports:
+      - "5701:5701"
     networks:
       - hznet
 
@@ -35,7 +37,7 @@ services:
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
       HZ_SERVERS: hz
-      HZ_CLUSTER_NAME: dev 
+      HZ_CLUSTER_NAME: dev
       MACHINE_COUNT: 10
       SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
