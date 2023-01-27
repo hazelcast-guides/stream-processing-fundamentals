@@ -130,16 +130,26 @@ def update(n: int):
     return df.plot(template='seaborn')  # seaborn, plotly_dark
 
 
+@app.callback(Input('location_input', 'value'), Input('block_input', 'value'))
+def requery(location: str, block: str):
+    global df
+    # remove the listener
+    # clear out and re-initialize the df
+    # recreate the df
+    # query for the new sns
+    # add the new listener
+
+
 app.layout = html.Div(children=[
     html.H1(children='Hazelcast Machine Shop Monitor'),
     dcc.Graph(
         id='main-graph',
         figure=fig
     ),
-    html.Label(children="Location", htmlFor='location_input'),
+    html.Label(children="Location", htmlFor='location_input', debounce=True),
     dcc.Input(id='location_input', value='', type='text'),
-    html.Label(children="Block", htmlFor='block_input'),
-    dcc.Input(id='block_input', value='', type='text'),
+    html.Label(children="Block", placeholder='B', htmlFor='block_input'),
+    dcc.Input(id='block_input', value='', placeholder='Los Angeles', type='text', debounce=True),
     dcc.Interval(id="timer", interval=5 * 1000, n_intervals=0)
 ], className='container')
 
