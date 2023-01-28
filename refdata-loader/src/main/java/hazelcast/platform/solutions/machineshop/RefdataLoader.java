@@ -86,10 +86,15 @@ public class RefdataLoader {
             "'keyFormat' = 'varchar'," +
             "'valueFormat' = 'varchar')";
 
-    private static final String SYSTEM_ACTIVITIES_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.SYSTEM_ACTIVITIES_MAP_NAME +
+    private static final String SYSTEM_ACTIVITIES_MAPPING_SQL = "CREATE OR REPLACE MAPPING " +
+            Names.SYSTEM_ACTIVITIES_MAP_NAME +
             " TYPE IMap OPTIONS (" +
             "'keyFormat' = 'varchar'," +
             "'valueFormat' = 'varchar')";
+
+    private static final String MACHINE_PROFILE_LOCATION_INDEX_SQL =
+             "CREATE INDEX IF NOT EXISTS MACHINE_LOCATION_INDEX ON " + Names.PROFILE_MAP_NAME + " (location) " +
+                     "TYPE HASH;";
 
     private static String getRequiredProp(String propName){
         String prop = System.getenv(propName);
@@ -168,6 +173,7 @@ public class RefdataLoader {
         hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
         hzClient.getSql().execute(EVENT_MAPPING_SQL);
         hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
+        hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
     }
     public static void main(String []args){
         configure();
