@@ -22,6 +22,7 @@ import bucket
 # HZ_CLUSTER_NAME
 #
 
+# Object Definitions
 
 class MachineStatusEvent(Portable):
     ID = 2
@@ -84,9 +85,6 @@ def logging_entry_listener(entry: EntryEvent):
     print(f'GOT {entry.key}: {entry.value.bit_temp}', flush=True)
 
 
-data_bucket = bucket.Bucket()
-
-
 def collecting_entry_listener(entry: EntryEvent[str, MachineStatusEvent]):
     global data_bucket
     data_bucket.add(entry.key, entry.value.bit_temp, entry.value.event_time)
@@ -108,14 +106,13 @@ def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: f
     return done.wait(timeout)
 
 
+# global state
+data_bucket = bucket.Bucket()
 app = Dash(__name__, external_stylesheets=['https://fonts.googleapis.com/css?family=Raleway:400,300,600'])
-
-now = pd.Timestamp.now()
-
 pd.options.plotting.backend = "plotly"
-
 df = pd.DataFrame()
 fig = df.plot(template='seaborn')
+query_listener_id = None
 
 
 @app.callback(Output('main-graph', 'figure'), Input('timer', 'n_intervals'))
@@ -130,14 +127,38 @@ def update(n: int):
     return df.plot(template='seaborn')  # seaborn, plotly_dark
 
 
-@app.callback(Input('location_input', 'value'), Input('block_input', 'value'))
+@app.callback(Output('matching_sns', 'children'), Input('location_input', 'value'), Input('block_input', 'value'))
 def requery(location: str, block: str):
-    global df
-    # remove the listener
-    # clear out and re-initialize the df
-    # recreate the df
-    # query for the new sns
-    # add the new listener
+    global df, data_bucket, query_listener_id
+
+    if location is None or len(location) == 0 or block is None or len(block) == 0:
+        return "Matching Serial Numbers: 0"
+
+    if query_listener_id is not None and event_map is not None:
+        event_map.remove_entry_listener(query_listener_id)
+
+    df = pd.DataFrame()
+    data_bucket = bucket.Bucket()
+
+    selected_serial_nums = hz.sql.execute(
+        f"""SELECT serialNum FROM machine_profiles WHERE
+           location = '{location}' AND
+           block = '{block}' """
+    ).result()
+
+    sn_list = "','".join([r["serialNum"] for r in selected_serial_nums])
+    if len(sn_list) > 0:
+        query = f"serialNum in ('{sn_list}')"
+        print(f'adding entry listener WHERE {query}', flush=True)
+        query_listener_id = event_map.add_entry_listener(
+            include_value=True,
+            predicate=hazelcast.predicate.sql(query),
+            added_func=collecting_entry_listener,
+            updated_func=collecting_entry_listener)
+        print("Listener added", flush=True)
+
+    serial_num_count = sn_list.count(",") + 1 if len(sn_list) > 0 else 0
+    return str(f'Matching Serial Numbers: {serial_num_count}')
 
 
 app.layout = html.Div(children=[
@@ -146,10 +167,11 @@ app.layout = html.Div(children=[
         id='main-graph',
         figure=fig
     ),
-    html.Label(children="Location", htmlFor='location_input', debounce=True),
-    dcc.Input(id='location_input', value='', type='text'),
-    html.Label(children="Block", placeholder='B', htmlFor='block_input'),
-    dcc.Input(id='block_input', value='', placeholder='Los Angeles', type='text', debounce=True),
+    html.Label(children="Location", htmlFor='location_input'),
+    dcc.Input(id='location_input', placeholder='Los Angeles', value='', type='text', debounce=True),
+    html.Label(children="Block", htmlFor='block_input'),
+    dcc.Input(id='block_input', value='', placeholder='B', type='text', debounce=True),
+    html.Div(id='matching_sns', children=""),
     dcc.Interval(id="timer", interval=5 * 1000, n_intervals=0)
 ], className='container')
 
@@ -172,22 +194,5 @@ if __name__ == '__main__':
     system_activities_map = hz.get_map('system_activities').blocking()
     wait_for(system_activities_map, 'LOADER_STATUS', 'FINISHED', 3 * 60 * 1000)
     print("The loader has finished, proceeding", flush=True)
-
-    selected_serial_nums = hz.sql.execute(
-        """SELECT serialNum FROM machine_profiles WHERE
-           location = 'Los Angeles' AND
-           block = 'A' """
-    ).result()
-
-    sn_list = "','".join([r["serialNum"] for r in selected_serial_nums])
-    query = f"serialNum in ('{sn_list}')"
-    print(f'adding entry listener WHERE {query}', flush=True)
-    event_map.add_entry_listener(
-        include_value=True,
-        predicate=hazelcast.predicate.sql(query),
-        added_func=collecting_entry_listener,
-        updated_func=collecting_entry_listener)
-
-    print("Listener added", flush=True)
 
     app.run_server(host='0.0.0.0', debug=True)
