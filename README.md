@@ -24,7 +24,7 @@ docker compose ps
 ```
 
 You should see  5 services up and running.  You may also see a 6th service called *refdata_loader* which exits after 
-it has data into the *machine_profiles* map. The output should look like this:
+it has data into the *machine_profiles* map. 
 
 Each service is described briefly below.
 
