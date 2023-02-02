@@ -176,7 +176,7 @@ remain up and events will continue to flow.
 ![first job](resources/firstjob.png)
 
 # Step 5: Pat Yourself on the Back 
-_Congratulations!  You've deployed your first pipeline_
+_You've deployed your first pipeline_
 
 # Step 6: Finish the Pipeline :-)
 
@@ -186,6 +186,7 @@ When you are done, look at the UI.  You should be able to tell that your job is 
 ![job done](resources/jobdone.png)
 
 # The End
+*Congratulations.*  If you made it this far then you know the fundamentals of real-time stream processing with Hazelcast!
 
 
 
