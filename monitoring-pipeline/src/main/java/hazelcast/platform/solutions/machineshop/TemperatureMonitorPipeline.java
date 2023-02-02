@@ -86,7 +86,8 @@ public class TemperatureMonitorPipeline {
                 .setName("machine status events");
 
         /*
-         *  At any time, you can add a logging sink to a stream stage to examine the contents
+         * At any time, you can add a logging sink to a stream stage to examine the contents.  Remove it when you
+         * are done testing.
          */
         statusEvents.writeTo(Sinks.logger( event -> "New Event SN=" + event.getValue().getString("serialNum")));
 
@@ -108,11 +109,11 @@ public class TemperatureMonitorPipeline {
         StreamStage<KeyedWindowResult<String, Double>> averageTemps = null;
 
         /*
-         * Look up the machine profile for this machine from the machine_pofiles map.  Output a
+         * Look up the machine profile for this machine from the machine_profiles map.  Output a
          * 4-tuple (serialNum, avg temp, warning temp, critical_temp)
          *
          * Note that the incoming event already has a key associated with it (serial number).  That same
-         * value will automatically be used to do the lookup on the machine_profile map. The general form is
+         * key will automatically be used to do the lookup on the machine_profile map. The general form is
          * averageTemps.mapUsingIMap( (p, w) -> LAMBDA RETURNING Tuple4)  where p is a MachineProfile as
          * GenericRecord and w is the KeyedWindowResult from the previous stage.
          *
@@ -135,8 +136,8 @@ public class TemperatureMonitorPipeline {
 
         /*
          * We only want to write to the output map if the current color has changed.  This prevents flooding the
-         * map listeners with irrelevant events.  We can use a  StreamStageWithKey.filterStateful to do this.
-         * The filter will remember the last value for each key.  The CurrentState class in this file can be
+         * map listeners with irrelevant events.  We can use   StreamStageWithKey.filterStateful to do this.
+         * The filter will remember the last value for each key.  The CurrentState class in this file should be
          * used to hold the remembered value.
          *
          * The solution will look like this:
