@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.solutions.machineshop.solution;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -86,11 +86,6 @@ public class TemperatureMonitorPipeline {
                 .setName("machine status events");
 
         /*
-         *  At any time, you can add a logging sink to a stream stage to examine the contents
-         */
-        statusEvents.writeTo(Sinks.logger( event -> "New Event SN=" + event.getValue().getString("serialNum")));
-
-        /*
          * Group the events by serial number. For each serial number, compute the average temperature over a 10s
          * tumbling window.
          *
@@ -105,7 +100,11 @@ public class TemperatureMonitorPipeline {
          *   https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/aggregate/AggregateOperations.html
          *
          */
-        StreamStage<KeyedWindowResult<String, Double>> averageTemps = null;
+        StreamStage<KeyedWindowResult<String, Double>> averageTemps = statusEvents
+                .groupingKey( entry -> entry.getValue().getString("serialNum"))
+                .window(WindowDefinition.tumbling(10000))
+                .aggregate(AggregateOperations.averagingLong( item -> item.getValue().getInt16("bitTemp")))
+                .setName("Average Temp").peek();
 
         /*
          * Look up the machine profile for this machine from the machine_pofiles map.  Output a
@@ -121,7 +120,11 @@ public class TemperatureMonitorPipeline {
          *    https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/datamodel/KeyedWindowResult.html
          *    https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/datamodel/Tuple4.html
          */
-        StreamStage<Tuple4<String,Double,Short,Short>> temperaturesAndLimits = null;
+        StreamStage<Tuple4<String, Double, Short, Short>> temperaturesAndLimits =
+                averageTemps.groupingKey(KeyedWindowResult::getKey)
+                        .<GenericRecord, Tuple4<String, Double, Short, Short>>mapUsingIMap(Names.PROFILE_MAP_NAME,
+                (window, mp) -> Tuple4.tuple4(window.getKey(), window.getValue(), mp.getInt16("warningTemp"), mp.getInt16("criticalTemp")))
+                .setName("Lookup Temp Limits");
 
         /*
          * Using a simple "map" stage, categorize the temperature as "green", "red" or "orange" and
@@ -131,7 +134,9 @@ public class TemperatureMonitorPipeline {
          *   the "categorizeTemp" function at the top of this file
          *   "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStage.html
          */
-        StreamStage<Tuple2<String,String>> labels = null;
+        StreamStage<Tuple2<String,String>> labels =
+                temperaturesAndLimits.map(tuple -> Tuple2.tuple2(tuple.f0(), categorizeTemp(tuple.f1(), tuple.f2(), tuple.f3())))
+                .setName("Apply Label");
 
         /*
          * We only want to write to the output map if the current color has changed.  This prevents flooding the
@@ -147,7 +152,14 @@ public class TemperatureMonitorPipeline {
          * See:
          *    "filterStateful" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html
          */
-        StreamStage<Tuple2<String,String>> changedLabels = null;
+        StreamStage<Tuple2<String,String>> changedLabels =
+                labels.groupingKey(Tuple2::f0)
+                        .filterStateful(CurrentState::new,
+                                (cs, label) -> {
+                                    boolean same = cs.getColor().equals(label.f1());
+                                    if (!same) cs.setColor(label.f1());
+                                    return !same;
+                                }).setName("Label Changes");
 
         /*
          * Finally, we can sink the results directly to the "machine_controls" map.  Tuple2<K,V> also implements
@@ -156,7 +168,7 @@ public class TemperatureMonitorPipeline {
          * See:
          *    "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/Sinks.html
          */
-        Sink<Map.Entry<String,String>> sink = null;
+        Sink<Map.Entry<String,String>> sink = Sinks.map(Names.CONTROLS_MAP_NAME);
         changedLabels.writeTo(sink);
 
         return pipeline;
