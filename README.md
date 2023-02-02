@@ -150,7 +150,7 @@ object.  You then build up the Pipeline by adding stages to it.
 > Hazelcast classes should not be included because they are already on the server.
 > - Code with *com.hazelcast* package names cannot be deployed to a *Viridian* cluster.
 
-> **TODO** Modify the logging output in the `TemperatureMonitorPipeline` and build the `monitoring-pipeline` project.
+> **TODO** Modify the logging output in the *TemperatureMonitorPipeline* and build the *monitoring-pipeline* project.
 > Then deploy it to the cluster using the *submitjob.sh* script.
 > ```shell
 > cd monitoring-pipeline

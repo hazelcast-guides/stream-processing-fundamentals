@@ -154,11 +154,13 @@ public class TemperatureMonitorPipeline {
          * Finally, we can sink the results directly to the "machine_controls" map.  Tuple2<K,V> also implements
          * Map.Entry<K,V> so we can just supply this directly to the IMap Sink.
          *
+         * Create a Sink using Sinks.map (see reference) then finish the pipeline with
+         * changedLabels.writeTo(mySink);
+         *
          * See:
          *    "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/Sinks.html
          */
         Sink<Map.Entry<String,String>> sink = null;
-        changedLabels.writeTo(sink);
 
         return pipeline;
     }
