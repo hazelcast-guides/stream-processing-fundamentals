@@ -7,10 +7,10 @@ We will be building a Hazelcast Pipeline for monitoring and reacting to telemetr
 
 ACME operates 1000’s of machines.  Each publishes several data points each second. Measurements include things like 
 bit temperature and RPM. Breakage is expensive. We want to go beyond maintenance schedules and monitor the information 
-in real time. Each machine has its own parameters for acceptable bit temperature, which is stored in a 
+in real time. Each machine has its own parameters for acceptable bit temperature, which are stored in a 
 *machine_profiles* IMap.  If excessive bit temperatures are caught in time, breakage can be averted by immediately 
 reducing the cutting speed.  Our Pipeline will do this by sending "green" / "orange" / "red" signals to the machines 
-via the *machine_controls* IMap.  A schematic of the lab components is shown below.
+via the *machine_controls* IMap.  A schematic of the lab is shown below.
 
 ![schematic](resources/pipeline.png)
 
@@ -24,7 +24,7 @@ docker compose ps
 ```
 
 You should see  5 services up and running.  You may also see a 6th service called *refdata_loader* which exits after 
-it has data into the *machine_profiles* map. 
+it has loaded data into the *machine_profiles* map. 
 
 Each service is described briefly below.
 
