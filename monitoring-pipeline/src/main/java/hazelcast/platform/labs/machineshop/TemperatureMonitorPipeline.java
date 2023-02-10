@@ -95,7 +95,7 @@ public class TemperatureMonitorPipeline {
          *
          * The general template for aggregation looks like this:
          *
-         * KeyedWindowResult result = statusEvents.groupingKey( GET KEY LAMBDA )
+         * StreamStage<KeyedWindowResult<String, Double>> averageTemps = statusEvents.groupingKey( GET KEY LAMBDA )
          *                                  .window( WINDOW DEFINITION )
          *                                  .aggregate(AggregateOperations.averagingLong( GET BIT TEMP LAMBDA);
          *
@@ -110,10 +110,15 @@ public class TemperatureMonitorPipeline {
          * Look up the machine profile for this machine from the machine_profiles map.  Output a
          * 4-tuple (serialNum, avg temp, warning temp, critical_temp)
          *
-         * Note that the incoming event already has a key associated with it (serial number).  That same
-         * key will automatically be used to do the lookup on the machine_profile map. The general form is
-         * averageTemps.mapUsingIMap( (p, w) -> LAMBDA RETURNING Tuple4)  where p is a MachineProfile as
-         * GenericRecord and w is the KeyedWindowResult from the previous stage.
+         * Note that the incoming event already has a key associated with it (serial number).  mapUsingImap
+         * on a StreamStageWithKey will automatically use they key of the event to do the lookup on the map.
+         * The general form is:
+         *
+         * StreamStage<Tuple4<String,Double,Short,Short>> temperaturesAndLimits
+         *      = averageTemps.mapUsingIMap( (w, p) -> LAMBDA RETURNING Tuple4)
+         *
+         * where p is a MachineProfile GenericRecord
+         *       w is the KeyedWindowResult from the previous stage.
          *
          * See:
          *   "mapUsingIMap" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html
@@ -135,13 +140,22 @@ public class TemperatureMonitorPipeline {
         /*
          * We only want to write to the output map if the current color has changed.  This prevents flooding the
          * map listeners with irrelevant events.  We can use   StreamStageWithKey.filterStateful to do this.
-         * The filter will remember the last value for each key.  The CurrentState class in this file should be
-         * used to hold the remembered value.
+         * The filter will remember the last value for each key.
+         *
+         * The CurrentState class in this file should be used to hold the remembered value.
          *
          * The solution will look like this:
-         *   labels.groupingKey(GET SERIAL NUM LAMBDA).filterStateful(CurrentState::new, (cs, labels) -> FILTER LAMBDA)
-         *   Where "cs" is the instance of current state related to this key and "labels" is the Tuple2 event from
-         *   the previous stage.
+         *
+         * StreamStage<Tuple2<String,String>> changedLabels =
+         *   labels.groupingKey(GET SERIAL NUM LAMBDA)
+         *         .filterStateful(CurrentState::new, (cs, event) -> FILTER LAMBDA)
+         *
+         * Where cs is the instance of current state related to this key
+         *       event is the Tuple2 event from the previous stage.
+         *
+         * Note:
+         *    When the incoming value is not equal to the previous value, don't forget to update the CurrentState
+         *    object with the new value
          *
          * See:
          *    "filterStateful" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html
@@ -150,15 +164,15 @@ public class TemperatureMonitorPipeline {
 
         /*
          * Finally, we can sink the results directly to the "machine_controls" map.  Tuple2<K,V> also implements
-         * Map.Entry<K,V> so we can just supply this directly to the IMap Sink.
+         * Map.Entry<K,V> so we can just supply it directly to the IMap Sink.
          *
          * Create a Sink using Sinks.map (see reference) then finish the pipeline with
-         * changedLabels.writeTo(mySink);
+         * changedLabels.writeTo(machineControlsSink);
          *
          * See:
          *    "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/Sinks.html
          */
-        Sink<Map.Entry<String,String>> sink = null;
+        Sink<Map.Entry<String,String>> machineControlsSink = null;
 
         return pipeline;
     }
