@@ -14,6 +14,10 @@ import hazelcast.platform.labs.machineshop.domain.Names;
 import java.io.Serializable;
 import java.util.Map;
 
+/*
+ **************** SOLUTION ****************
+ */
+
 public class TemperatureMonitorPipelineSolution {
 
     /*
