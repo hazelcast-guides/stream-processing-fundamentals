@@ -1,11 +1,8 @@
-package hazelcast.platform.solutions.machineshop.domain;
+package hazelcast.platform.labs.machineshop.domain;
 
 import com.hazelcast.nio.serialization.Portable;
 import com.hazelcast.nio.serialization.PortableReader;
 import com.hazelcast.nio.serialization.PortableWriter;
-import com.hazelcast.nio.serialization.compact.CompactReader;
-import com.hazelcast.nio.serialization.compact.CompactSerializer;
-import com.hazelcast.nio.serialization.compact.CompactWriter;
 
 import java.io.IOException;
 import java.util.Random;

@@ -1,16 +1,14 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.labs.machineshop;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple4;
 import com.hazelcast.jet.pipeline.*;
-import com.hazelcast.map.IMap;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
-import hazelcast.platform.solutions.machineshop.domain.Names;
+import hazelcast.platform.labs.machineshop.domain.Names;
 
 import java.io.Serializable;
 import java.util.Map;

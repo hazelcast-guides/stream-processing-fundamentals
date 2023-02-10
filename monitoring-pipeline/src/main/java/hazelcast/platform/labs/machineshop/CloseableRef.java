@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.labs.machineshop;
 
 import java.io.Closeable;
 import java.io.IOException;

@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.labs.machineshop;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
@@ -7,11 +7,11 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryUpdatedListener;
-import hazelcast.platform.solutions.MapWaiter;
-import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
-import hazelcast.platform.solutions.machineshop.domain.MachineShopPortableFactory;
-import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
-import hazelcast.platform.solutions.machineshop.domain.Names;
+import hazelcast.platform.labs.MapWaiter;
+import hazelcast.platform.labs.machineshop.domain.MachineProfile;
+import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
+import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
+import hazelcast.platform.labs.machineshop.domain.Names;
 
 import java.util.Random;
 import java.util.Set;

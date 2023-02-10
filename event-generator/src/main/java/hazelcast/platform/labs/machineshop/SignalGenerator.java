@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.labs.machineshop;
 
 import java.util.Random;
 

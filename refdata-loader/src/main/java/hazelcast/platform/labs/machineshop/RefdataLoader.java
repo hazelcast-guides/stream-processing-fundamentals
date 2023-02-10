@@ -1,14 +1,13 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.labs.machineshop;
 
 import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConnectionStrategyConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
-import hazelcast.platform.solutions.machineshop.domain.MachineProfile;
-import hazelcast.platform.solutions.machineshop.domain.MachineShopPortableFactory;
-import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
-import hazelcast.platform.solutions.machineshop.domain.Names;
+import hazelcast.platform.labs.machineshop.domain.MachineProfile;
+import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
+import hazelcast.platform.labs.machineshop.domain.Names;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -65,7 +64,7 @@ public class RefdataLoader {
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
             "'valueFormat' = 'compact'," +
-            "'valueCompactTypeName' = 'hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent')";
+            "'valueCompactTypeName' = 'hazelcast.platform.labs.machineshop.domain.MachineStatusEvent')";
 
     private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
@@ -80,7 +79,7 @@ public class RefdataLoader {
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
             "'valueFormat' = 'compact'," +
-            "'valueCompactTypeName' = 'hazelcast.platform.solutions.machineshop.domain.MachineProfile')";
+            "'valueCompactTypeName' = 'hazelcast.platform.labs.machineshop.domain.MachineProfile')";
     private static final String CONTROLS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.CONTROLS_MAP_NAME +
             " TYPE IMap OPTIONS (" +
             "'keyFormat' = 'varchar'," +

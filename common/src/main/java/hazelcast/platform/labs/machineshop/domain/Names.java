@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions.machineshop.domain;
+package hazelcast.platform.labs.machineshop.domain;
 
 public class Names {
 

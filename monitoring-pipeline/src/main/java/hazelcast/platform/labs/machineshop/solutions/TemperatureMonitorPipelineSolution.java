@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions.machineshop.solution;
+package hazelcast.platform.labs.machineshop.solutions;
 
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -8,14 +8,13 @@ import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple4;
 import com.hazelcast.jet.pipeline.*;
-import com.hazelcast.map.IMap;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
-import hazelcast.platform.solutions.machineshop.domain.Names;
+import hazelcast.platform.labs.machineshop.domain.Names;
 
 import java.io.Serializable;
 import java.util.Map;
 
-public class TemperatureMonitorPipeline {
+public class TemperatureMonitorPipelineSolution {
 
     /*
      * Used for stateful filtering.  Must be serializable as it is included in stream snapshot

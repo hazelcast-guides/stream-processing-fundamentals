@@ -1,4 +1,4 @@
-package hazelcast.platform.solutions;
+package hazelcast.platform.labs;
 
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.map.IMap;

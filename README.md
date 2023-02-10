@@ -117,7 +117,7 @@ short bitTemp = newEvent.f1();
 
 # Step 4: Deploy Your First Job
 
-> **TODO** Open up  the *hazelcast.platform.solutions.machineshop.TemperatureMonitorPipeline* class in the *monitoring-pipeline*
+> **TODO** Open up  the *hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline* class in the *monitoring-pipeline*
 project and review the code there.  
 
 The main method, shown below, is boilerplate that helps with deploying the job to a cluster.

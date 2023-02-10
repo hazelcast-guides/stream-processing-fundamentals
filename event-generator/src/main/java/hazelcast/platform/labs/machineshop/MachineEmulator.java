@@ -1,7 +1,7 @@
-package hazelcast.platform.solutions.machineshop;
+package hazelcast.platform.labs.machineshop;
 
 import com.hazelcast.map.IMap;
-import hazelcast.platform.solutions.machineshop.domain.MachineStatusEvent;
+import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
 
 public class MachineEmulator implements  Runnable{
     private final String serialNum;
