@@ -38,7 +38,9 @@ public class MachineEmulator implements  Runnable{
         currStatus.setBitPositionY(0);
         currStatus.setBitPositionZ(0);
 
-        machineStatusMap.put(serialNum, currStatus);
+        machineStatusMap.putAsync(serialNum, currStatus).whenComplete((v,x) -> {
+            if (x != null) System.out.println("WARNING: put failed");
+        });
     }
 
     public MachineStatusEvent getCurrStatus(){
