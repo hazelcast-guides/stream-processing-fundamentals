@@ -12,6 +12,7 @@ import hazelcast.platform.labs.machineshop.domain.MachineProfile;
 import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
 import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.labs.machineshop.domain.Names;
+import hazelcast.platform.labs.viridian.ViridianConnection;
 
 import java.util.Random;
 import java.util.Set;
@@ -73,11 +74,13 @@ public class EventGenerator {
     }
 
     private static void configure() {
-        String hzServersProp = getRequiredProp(HZ_SERVERS_PROP);
-        hzServers = hzServersProp.split(",");
-        for (int i = 0; i < hzServers.length; ++i) hzServers[i] = hzServers[i].trim();
+        if (!ViridianConnection.viridianConfigPresent()){
+            String hzServersProp = getRequiredProp(HZ_SERVERS_PROP);
+            hzServers = hzServersProp.split(",");
+            for (int i = 0; i < hzServers.length; ++i) hzServers[i] = hzServers[i].trim();
 
-        hzClusterName = getRequiredProp(HZ_CLUSTER_NAME_PROP);
+            hzClusterName = getRequiredProp(HZ_CLUSTER_NAME_PROP);
+        }
 
         machineCount = getRequiredIntegerProp(MACHINE_COUNT_PROP);
 
@@ -90,13 +93,17 @@ public class EventGenerator {
 
     public static void connectToHazelcast(){
         ClientConfig clientConfig = new ClientConfig();
-        clientConfig.setClusterName(hzClusterName);
-        for (String server: hzServers) clientConfig.getNetworkConfig().addAddress(server);
+
+        if (ViridianConnection.viridianConfigPresent()){
+            ViridianConnection.configureFromEnvironment(clientConfig);
+        } else {
+            clientConfig.setClusterName(hzClusterName);
+            for (String server : hzServers) clientConfig.getNetworkConfig().addAddress(server);
+        }
 
         // configure portable serialization
         clientConfig.getSerializationConfig().getPortableFactories().
                 put(MachineShopPortableFactory.ID, new MachineShopPortableFactory());
-
 
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
         machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
@@ -140,7 +147,7 @@ public class EventGenerator {
 
         Random rand = new Random();
 
-        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(16);
+        ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1 + machineCount/10);
         Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
 
         for (String sn: serialNums) {
@@ -161,7 +168,7 @@ public class EventGenerator {
 
             MachineEmulator emulator = new MachineEmulator(machineEventMap, sn, signalGen);
             machineEmulatorMap.put(emulator.getSerialNum(), emulator);
-            executor.scheduleAtFixedRate(emulator, rand.nextInt(1000), 1000, TimeUnit.MILLISECONDS);
+            executor.scheduleAtFixedRate(emulator, rand.nextInt(100), 1000, TimeUnit.MILLISECONDS);
         }
     }
 
