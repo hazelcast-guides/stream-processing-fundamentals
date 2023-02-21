@@ -8,6 +8,7 @@ import com.hazelcast.map.IMap;
 import hazelcast.platform.labs.machineshop.domain.MachineProfile;
 import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
 import hazelcast.platform.labs.machineshop.domain.Names;
+import hazelcast.platform.labs.viridian.ViridianConnection;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -178,8 +179,12 @@ public class RefdataLoader {
         configure();
 
         ClientConfig clientConfig = new ClientConfig();
-        clientConfig.setClusterName(hzClusterName);
-        clientConfig.getNetworkConfig().addAddress(hzServers);
+        if (ViridianConnection.viridianConfigPresent()){
+            ViridianConnection.configureFromEnvironment(clientConfig);
+        } else {
+            clientConfig.setClusterName(hzClusterName);
+            clientConfig.getNetworkConfig().addAddress(hzServers);
+        }
         clientConfig.getConnectionStrategyConfig().setAsyncStart(false);
         clientConfig.getConnectionStrategyConfig().setReconnectMode(ClientConnectionStrategyConfig.ReconnectMode.ON);
         clientConfig.getSerializationConfig().getPortableFactories()
