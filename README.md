@@ -170,7 +170,7 @@ stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,591 [ INFO] [hz.hungr
 stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,640 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=DYQ714
 ```
 
-> **TODO** Inspect the running job using the management center and, when you are done, cancel it.  The Hazelcast cluster will 
+> **TODO** Inspect the running job using the management center and, **when you are done, cancel it**.  The Hazelcast cluster will 
 remain up and events will continue to flow. 
 
 ![first job](resources/firstjob.png)
@@ -178,12 +178,18 @@ remain up and events will continue to flow.
 # Step 5: Pat Yourself on the Back 
 _You've deployed your first pipeline_
 
-# Step 6: Finish the Pipeline :-)
+# Step 6: Finish the Pipeline
 
 Continue building the pipeline following the instructions in `TemperatureMonitorPipeline.java`
-When you are done, look at the UI.  You should be able to tell that your job is now controlling the machines.
+You may want to deploy and cancel the job multiple times while you are building the pipeline. When you are done, 
+look at the UI.  You should be able to tell that your job is now controlling the machines.
 
 ![job done](resources/jobdone.png)
+
+You can also see machine control events in the "event_generator" log.
+```shell
+docker compose logs --follow event_generator
+```
 
 # The End
 *Congratulations.*  If you made it this far then you know the fundamentals of real-time stream processing with Hazelcast!
