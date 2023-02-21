@@ -1,0 +1,69 @@
+services:
+
+  submit_job:
+    image: hazelcast/hazelcast:5.2.1
+    volumes:
+      - ".:/project"
+    command: /project/cli/submitjob.sh
+    networks:
+    - hznet
+    profiles:
+      - disabled
+
+  cancel_job:
+    image: hazelcast/hazelcast:5.2.1
+    volumes:
+      - ".:/project"
+    command: /project/cli/canceljob.sh
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
+  refdata_loader:
+    image: openjdk:11
+    command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
+    environment:
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_CLUSTER_ID_keys
+      VIRIDIAN_CLUSTER_ID: pr-CLUSTER_ID
+      VIRIDIAN_PASSWORD: CLUSTER_PASSWORD
+      VIRIDIAN_DISCOVERY_TOKEN: CLUSTER_DISCO_TOKEN
+      MACHINE_COUNT: 10
+      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+
+  event_generator:
+    image: openjdk:11
+    command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
+    environment:
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_CLUSTER_ID_keys
+      VIRIDIAN_CLUSTER_ID: pr-CLUSTER_ID
+      VIRIDIAN_PASSWORD: CLUSTER_PASSWORD
+      VIRIDIAN_DISCOVERY_TOKEN: CLUSTER_DISCO_TOKEN
+      MACHINE_COUNT: 10
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+  
+  ui:
+    build:
+      context: ./ui
+    environment:
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_CLUSTER_ID_keys
+      VIRIDIAN_CLUSTER_ID: pr-CLUSTER_ID
+      VIRIDIAN_PASSWORD: CLUSTER_PASSWORD
+      VIRIDIAN_DISCOVERY_TOKEN: CLUSTER_DISCO_TOKEN
+    ports:
+      - "8050:8050"
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+
+networks:
+  hznet: 
+  

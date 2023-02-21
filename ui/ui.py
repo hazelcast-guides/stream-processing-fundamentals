@@ -14,9 +14,11 @@ from hazelcast.proxy.map import BlockingMap
 from hazelcast.serialization.api import Portable, PortableWriter, PortableReader
 
 import bucket
+import viridian
 
 
-# the following environment variables are required
+# the following environment variables are required for a local connection
+# for Viridian connections, see "viridian.py"
 #
 # HZ_SERVERS
 # HZ_CLUSTER_NAME
@@ -177,17 +179,25 @@ app.layout = html.Div(children=[
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    hz_cluster_name = get_required_env('HZ_CLUSTER_NAME')
-    hz_servers = get_required_env('HZ_SERVERS').split(',')
-    hz = HazelcastClient(
-        cluster_name=hz_cluster_name,
-        cluster_members=hz_servers,
-        async_start=False,
-        reconnect_mode=ReconnectMode.ON,
-        portable_factories={
-            1: portable_factory
-        }
-    )
+    if viridian.viridian_config_present():
+        hz = viridian.configure_from_environment(async_start=False,
+                                                 reconnect_mode=ReconnectMode.ON,
+                                                 portable_factories={
+                                                     1: portable_factory
+                                                 })
+    else:
+        hz_cluster_name = get_required_env('HZ_CLUSTER_NAME')
+        hz_servers = get_required_env('HZ_SERVERS').split(',')
+        hz = HazelcastClient(
+            cluster_name=hz_cluster_name,
+            cluster_members=hz_servers,
+            async_start=False,
+            reconnect_mode=ReconnectMode.ON,
+            portable_factories={
+                1: portable_factory
+            }
+        )
+
     print('Connected to Hazelcast', flush=True)
     machine_controls_map = hz.get_map('machine_controls').blocking()
     event_map = hz.get_map('machine_events').blocking()

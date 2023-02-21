@@ -106,11 +106,13 @@ public class RefdataLoader {
     }
 
     private static void configure(){
-        String hzServersProp = getRequiredProp(HZ_SERVERS_PROP);
-        hzServers = hzServersProp.split(",");
-        for(int i=0; i < hzServers.length; ++i) hzServers[i] = hzServers[i].trim();
+        if (!ViridianConnection.viridianConfigPresent()) {
+            String hzServersProp = getRequiredProp(HZ_SERVERS_PROP);
+            hzServers = hzServersProp.split(",");
+            for (int i = 0; i < hzServers.length; ++i) hzServers[i] = hzServers[i].trim();
 
-        hzClusterName = getRequiredProp(HZ_CLUSTER_NAME_PROP);
+            hzClusterName = getRequiredProp(HZ_CLUSTER_NAME_PROP);
+        }
 
         String temp = getRequiredProp(MACHINE_COUNT_PROP);
         try {
