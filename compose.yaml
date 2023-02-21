@@ -20,15 +20,25 @@ services:
     networks:
       - hznet
 
-  cli:
+  submit_job:
     image: hazelcast/hazelcast:5.2.1
-    command: hz-cli
     volumes:
       - ".:/project"
-    command: >
-      tail -f < /dev/null
+    command: /project/cli/submitjob.sh
     networks:
     - hznet
+    profiles:
+      - disabled
+
+  cancel_job:
+    image: hazelcast/hazelcast:5.2.1
+    volumes:
+      - ".:/project"
+    command: /project/cli/canceljob.sh
+    networks:
+      - hznet
+    profiles:
+      - disabled
 
   refdata_loader:
     image: openjdk:11

@@ -151,12 +151,12 @@ object.  You then build up the Pipeline by adding stages to it.
 > - Code with *com.hazelcast* package names cannot be deployed to a *Viridian* cluster.
 
 > **TODO** Modify the logging output in the *TemperatureMonitorPipeline* and build the *monitoring-pipeline* project.
-> Then deploy it to the cluster using the *submitjob.sh* script.
+> Then deploy it to the cluster using the *submit_job* docker compose service.
 > ```shell
 > cd monitoring-pipeline
 > mvn package
 > cd ..
-> ./submitjob.sh
+> docker compose run submit_job
 > # look for the logging statements in the Hazelcast logs
 > docker compose logs --follow hz
 > Ctrl-C
