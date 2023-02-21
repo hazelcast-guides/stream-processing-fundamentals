@@ -15,6 +15,20 @@
         <hazelcast.version>5.2.1</hazelcast.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>private-repository</id>
+            <name>Hazelcast Private Repository</name>
+            <url>https://repository.hazelcast.com/release/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <modules>
         <module>common</module>
         <module>refdata-loader</module>
