@@ -172,7 +172,7 @@ app.layout = html.Div(children=[
     html.Label(children="Block", htmlFor='block_input'),
     dcc.Input(id='block_input', value='', placeholder='B', type='text', debounce=True),
     html.Div(id='matching_sns', children=""),
-    dcc.Interval(id="timer", interval=5 * 1000, n_intervals=0)
+    dcc.Interval(id="timer", interval=2 * 1000, n_intervals=0)
 ], className='container')
 
 if __name__ == '__main__':
