@@ -217,10 +217,9 @@ and connect the UI, refdata loader and event_generator to it as well.
 > If you haven't already done so, navigate to https://viridian.hazelcast.com, create an 
 > account, and create a new "Production" cluster.  This will deploy a 3 node cluster.
 
-You will need to do some cluster configuration before the monitoring pipeline will work on 
-Viridian.  You'll need to enable event journals on the "machine_events" map. The 
-"refdata_loader" service will automatically do the required setup but you will need to deploy 
-classes to the server first.  
+You will need to enable event journals on the "machine_events" map before deploying the Pipeline. The 
+"refdata_loader" service will automatically do the required setup but it requires that certain classes be available 
+on the server classpath.  
 
 > **TO DO**
 > 
