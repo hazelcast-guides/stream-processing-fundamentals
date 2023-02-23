@@ -1,20 +1,34 @@
 services:
 
   submit_job:
-    image: hazelcast/hazelcast:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.2.1
+    environment:
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_q5je2628_keys
+      VIRIDIAN_CLUSTER_ID: pr-q5je2628
+      VIRIDIAN_PASSWORD: a78de577fb3
+      VIRIDIAN_DISCOVERY_TOKEN: CDYb5U7ViM5qApsX9RrZLoJXuuBZJ12gE5IyrfLWFCXb1S3pN3
+      MACHINE_COUNT: 10
+      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
       - ".:/project"
-    command: /project/cli/submitjob.sh
+    command: /project/cli/viridian_submitjob.sh
     networks:
     - hznet
     profiles:
       - disabled
 
   cancel_job:
-    image: hazelcast/hazelcast:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.2.1
+    environment:
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_q5je2628_keys
+      VIRIDIAN_CLUSTER_ID: pr-q5je2628
+      VIRIDIAN_PASSWORD: a78de577fb3
+      VIRIDIAN_DISCOVERY_TOKEN: CDYb5U7ViM5qApsX9RrZLoJXuuBZJ12gE5IyrfLWFCXb1S3pN3
     volumes:
       - ".:/project"
-    command: /project/cli/canceljob.sh
+    command: /project/cli/viridian_canceljob.sh
     networks:
       - hznet
     profiles:
@@ -24,10 +38,10 @@ services:
     image: openjdk:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
-      VIRIDIAN_SECRETS_DIR: /project/hzcloud_CLUSTER_ID_keys
-      VIRIDIAN_CLUSTER_ID: pr-CLUSTER_ID
-      VIRIDIAN_PASSWORD: CLUSTER_PASSWORD
-      VIRIDIAN_DISCOVERY_TOKEN: CLUSTER_DISCO_TOKEN
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_q5je2628_keys
+      VIRIDIAN_CLUSTER_ID: pr-q5je2628
+      VIRIDIAN_PASSWORD: a78de577fb3
+      VIRIDIAN_DISCOVERY_TOKEN: CDYb5U7ViM5qApsX9RrZLoJXuuBZJ12gE5IyrfLWFCXb1S3pN3
       MACHINE_COUNT: 10
       SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
@@ -39,10 +53,10 @@ services:
     image: openjdk:11
     command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
     environment:
-      VIRIDIAN_SECRETS_DIR: /project/hzcloud_CLUSTER_ID_keys
-      VIRIDIAN_CLUSTER_ID: pr-CLUSTER_ID
-      VIRIDIAN_PASSWORD: CLUSTER_PASSWORD
-      VIRIDIAN_DISCOVERY_TOKEN: CLUSTER_DISCO_TOKEN
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_q5je2628_keys
+      VIRIDIAN_CLUSTER_ID: pr-q5je2628
+      VIRIDIAN_PASSWORD: a78de577fb3
+      VIRIDIAN_DISCOVERY_TOKEN: CDYb5U7ViM5qApsX9RrZLoJXuuBZJ12gE5IyrfLWFCXb1S3pN3
       MACHINE_COUNT: 10
     volumes:
       - ".:/project"
@@ -53,10 +67,10 @@ services:
     build:
       context: ./ui
     environment:
-      VIRIDIAN_SECRETS_DIR: /project/hzcloud_CLUSTER_ID_keys
-      VIRIDIAN_CLUSTER_ID: pr-CLUSTER_ID
-      VIRIDIAN_PASSWORD: CLUSTER_PASSWORD
-      VIRIDIAN_DISCOVERY_TOKEN: CLUSTER_DISCO_TOKEN
+      VIRIDIAN_SECRETS_DIR: /project/hzcloud_q5je2628_keys
+      VIRIDIAN_CLUSTER_ID: pr-q5je2628
+      VIRIDIAN_PASSWORD: a78de577fb3
+      VIRIDIAN_DISCOVERY_TOKEN: CDYb5U7ViM5qApsX9RrZLoJXuuBZJ12gE5IyrfLWFCXb1S3pN3
     ports:
       - "8050:8050"
     volumes:
