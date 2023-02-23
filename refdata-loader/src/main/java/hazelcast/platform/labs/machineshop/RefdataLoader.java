@@ -176,6 +176,13 @@ public class RefdataLoader {
         hzClient.getSql().execute(EVENT_MAPPING_SQL);
         hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
         hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
+        System.out.println("Initialized SQL Mappings");
+    }
+
+    private static void configureMaps(HazelcastInstance hzClient){
+        hzClient.getExecutorService("default").execute(new Names.ProfileMapConfigurationTask());
+        hzClient.getExecutorService("default").execute(new Names.EventMapConfigurationTask());
+        System.out.println("Initialized Map Configurations");
     }
     public static void main(String []args){
         configure();
@@ -192,9 +199,11 @@ public class RefdataLoader {
         clientConfig.getSerializationConfig().getPortableFactories()
             .put(MachineShopPortableFactory.ID, new MachineShopPortableFactory());
 
-
         HazelcastInstance hzClient = HazelcastClient.newHazelcastClient(clientConfig);
 
+        if (ViridianConnection.viridianConfigPresent()){
+            configureMaps(hzClient);
+        }
         doSQLMappings(hzClient);
 
         Map<String, MachineProfile> batch = new HashMap<>();
