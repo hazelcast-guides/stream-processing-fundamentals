@@ -4,7 +4,10 @@ import com.hazelcast.client.HazelcastClient;
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.client.config.ClientConnectionStrategyConfig;
 import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.internal.config.ConfigDataSerializerHook;
 import com.hazelcast.map.IMap;
+import hazelcast.platform.labs.DynamicMapConfigTask;
+import hazelcast.platform.labs.GetConfigDSFactoryIdTask;
 import hazelcast.platform.labs.machineshop.domain.MachineProfile;
 import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
 import hazelcast.platform.labs.machineshop.domain.Names;
@@ -15,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 /**
  * Expects the following environment variables
@@ -177,11 +181,40 @@ public class RefdataLoader {
         hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
         hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
     }
-    public static void main(String []args){
+
+    /*
+     * This is messy.  I want to use a Callable to configure maps dynamically on Viridian since Viridian doesn't
+     * support configuring map journals.  Ideally, I would like to just pass the actual MapConfig inside the Callable.
+     * That means it has to be serializable and MapConfig is not java.io.serializable but DataSerializable.  That
+     * in turn means I'll need to register a DataSerialzableFactory  using the same factoryId as the server uses.
+     * For some reason, that is not statically set but is actually set by a System property that does not get set
+     * on the client.  So first we have to go and look up that property on the server side.  Once we've obtained the
+     * correct factory id then we can properly register the DataSerializableFactory for MapConfig and
+     * EventJournalConfig on the client.
+     *
+     * Even this approach is tenuous because we don't know exactly when the ConfigDataSerializerHook.F_ID static
+     * field will be initialized.
+     */
+    private static void registerHazelcastConfigDataSerializers(HazelcastInstance hzClient){
+        Future<Integer> configDSFactoryId = hzClient.getExecutorService("default")
+                .submit(new GetConfigDSFactoryIdTask());
+        try {
+            System.setProperty("hazelcast.serialization.ds.config", configDSFactoryId.get().toString());
+        } catch(Exception x){
+            System.err.println("Could not obtain config data serializable factory id on server.  Exiting.");
+            x.printStackTrace(System.err);
+            System.exit(1);
+        }
+
+        hzClient.getConfig().getSerializationConfig().getDataSerializableFactories()
+                .put(ConfigDataSerializerHook.F_ID, new ConfigDataSerializerHook().createFactory());
+    }
+
+    public static void main(String []args) {
         configure();
 
         ClientConfig clientConfig = new ClientConfig();
-        if (ViridianConnection.viridianConfigPresent()){
+        if (ViridianConnection.viridianConfigPresent()) {
             ViridianConnection.configureFromEnvironment(clientConfig);
         } else {
             clientConfig.setClusterName(hzClusterName);
@@ -190,10 +223,23 @@ public class RefdataLoader {
         clientConfig.getConnectionStrategyConfig().setAsyncStart(false);
         clientConfig.getConnectionStrategyConfig().setReconnectMode(ClientConnectionStrategyConfig.ReconnectMode.ON);
         clientConfig.getSerializationConfig().getPortableFactories()
-            .put(MachineShopPortableFactory.ID, new MachineShopPortableFactory());
-
+                .put(MachineShopPortableFactory.ID, new MachineShopPortableFactory());
 
         HazelcastInstance hzClient = HazelcastClient.newHazelcastClient(clientConfig);
+        registerHazelcastConfigDataSerializers(hzClient);
+
+        Future<Boolean> eventMapConfigResult =
+                hzClient.getExecutorService("default").submit(new DynamicMapConfigTask(Names.EVENT_MAP_CONFIG));
+        Future<Boolean> profileMapConfigResult =
+                hzClient.getExecutorService("default").submit(new DynamicMapConfigTask(Names.PROFILE_MAP_CONFIG));
+
+        try {
+            System.out.print("Dynamic configuration of " + Names.EVENT_MAP_NAME + (eventMapConfigResult.get() ? " SUCCEEDED" : "FAILED"));
+            System.out.print("Dynamic configuration of " + Names.PROFILE_MAP_NAME + (profileMapConfigResult.get() ? " SUCCEEDED" : "FAILED"));
+        } catch(Exception x){
+            System.err.println("ERROR: Something went wrong while performing dynamic map configuration");
+            x.printStackTrace(System.err);
+        }
 
         doSQLMappings(hzClient);
 
