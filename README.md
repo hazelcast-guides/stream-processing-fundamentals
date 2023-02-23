@@ -16,7 +16,9 @@ via the *machine_controls* IMap.  A schematic of the lab is shown below.
 
 # Step 1: Validate the Lab Environment
 
-> **TODO**  Run the following commands to start your lab environment.
+> **TO DO**
+> 
+> Run the following commands to start your lab environment.
 ```shell
 mvn install
 docker compose up -d
@@ -37,7 +39,9 @@ Each service is described briefly below.
 | ui              | A Python program that listens to the *machine_events* map and displays temperature data graphically. Accessible at http://localhost:8050 |
 
 
-> **TODO** Access the UI at http://localhost:8050. Specify a Location and Block to see a live display of the current 
+> **TO DO** 
+> 
+> Access the UI at http://localhost:8050. Specify a Location and Block to see a live display of the current 
 > temperature of a subset of machines.  Valid locations are "San Antonio" and "Los Angeles". Valid blocks are "A" and 
 > "B". *Note: machines in block "A" are very likely to run hot.*  You should see something similar to the image below.
 
@@ -47,12 +51,16 @@ Each service is described briefly below.
 
 Data in Hazelcast clusters can be accessed via SQL.  For more details, see https://docs.hazelcast.com/hazelcast/latest/sql/get-started-sql
 
-> **TODO** Open up the management center (http://localhost:8080) and click on the "SQL Browser" button.
+> **TO DO**
+> 
+> Open up the management center (http://localhost:8080) and click on the "SQL Browser" button.
 
 ![MC](resources/MC_SQL.png)
 
 ## Machine Profiles
-> **TODO** Run `select * from machine_profiles` in the SQL Browser.
+> **TO DO** 
+> 
+> Run `select * from machine_profiles` in the SQL Browser.
 
 You will see that for each machine there is a serial number, information about the location and the warning and 
 critical temperature limits for that particulare machine.
@@ -61,7 +69,9 @@ critical temperature limits for that particulare machine.
 
 ## Machine Events
 
-> **TODO** Run `select * from machine_events`
+> **TO DO**
+> 
+> Run `select * from machine_events`
 
 ![events](resources/machine_events.png)
 
@@ -117,7 +127,9 @@ short bitTemp = newEvent.f1();
 
 # Step 4: Deploy Your First Job
 
-> **TODO** Open up  the *hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline* class in the *monitoring-pipeline*
+> **TO DO**
+> 
+> Open up  the *hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline* class in the *monitoring-pipeline*
 project and review the code there.  
 
 The main method, shown below, is boilerplate that helps with deploying the job to a cluster.
@@ -150,7 +162,9 @@ object.  You then build up the Pipeline by adding stages to it.
 > Hazelcast classes should not be included because they are already on the server.
 > - Code with *com.hazelcast* package names cannot be deployed to a *Viridian* cluster.
 
-> **TODO** Modify the logging output in the *TemperatureMonitorPipeline* and build the *monitoring-pipeline* project.
+> **TO DO**
+> 
+> Modify the logging output in the *TemperatureMonitorPipeline* and build the *monitoring-pipeline* project.
 > Then deploy it to the cluster using the *submit_job* docker compose service.
 > ```shell
 > cd monitoring-pipeline
@@ -170,7 +184,9 @@ stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,591 [ INFO] [hz.hungr
 stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,640 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=DYQ714
 ```
 
-> **TODO** Inspect the running job using the management center and, **when you are done, cancel it**.  The Hazelcast cluster will 
+> **TO DO**
+> 
+> Inspect the running job using the management center and, **when you are done, cancel it**.  The Hazelcast cluster will 
 remain up and events will continue to flow. 
 
 ![first job](resources/firstjob.png)
@@ -191,8 +207,66 @@ You can also see machine control events in the "event_generator" log.
 docker compose logs --follow event_generator
 ```
 
+# Step 7: Deploy  to Viridian
+
+In this step, you will deploy your temperature monitoring Pipeline to a Viridian cluster 
+and connect the UI, refdata loader and event_generator to it as well.
+
+> **TO DO** 
+> 
+> If you haven't already done so, navigate to https://viridian.hazelcast.com, create an 
+> account, and create a new "Production" cluster.  This will deploy a 3 node cluster.
+
+You will need to do some cluster configuration before the monitoring pipeline will work on 
+Viridian.  You'll need to enable event journals on the "machine_events" map. The 
+"refdata_loader" service will automatically do the required setup but you will need to deploy 
+classes to the server first.  
+
+> **TO DO**
+> 
+> In the Viridian console, select the cluster you will use and navigate to 
+> "Manage/Custom Classes".  Upload "common/target/common-1.0-SNAPSHOT.jar".
+
+![upload classes](resources/custom_classes.png)
+
+> **NOTE** This step is required because we are using the the Java Executor Service 
+> (https://docs.hazelcast.com/hazelcast/5.2/computing/executor-service#hide-nav) to perform 
+> dynamic configuration of the "machine_events" region in Viridian. With Pipeline deployments,
+> tranferring the classes to the cluster is handled automatically during deployment.  You do not need 
+> to manually upload the Pipeline.  
+
+Next we will obtain all of the keys and configuration parameters required to make a connection to Viridian.
+
+> **TO DO**
+> 
+> In the Viridian Console, click on "Connect Cluster" next to your cluster then, select "Advanced Setup" and 
+> Download the keystore file for your cluster as shown below.  Unzip the downloaded file and place it directly 
+> inside of the "stream-processing-fundamentals" directory.  You will also need the discovery 
+> token, truststore password and cluster id that are displayed on the that screen. 
+
+![connect](resources/connect.png)
+
+![advanced](resources/advanced_setup.png)
+
+> **TO DO**
+> 
+> Now edit "viridian.env" and provide the path to the key files, the discover token, the 
+> cluster id and the keystore password.
+> 
+> Once you have done this, you are ready to start the refdata_loader, event_generator and ui pointed to your 
+> Viridian cluster: `docker compose -f viridian.compose.yaml up -d`.  You can view the logs with 
+> `docker compose -f viridian.compose.yaml logs --follow`.  Also, use the Management Center for your cluster to verify 
+> that it is receiving traffic.  
+> 
+> Lastly, submit your job: `docker compose -f viridian.compose.yaml run submit_job`. You can verify it is running using
+> Management Center accessible from the Viridian console.
+
 # The End
-*Congratulations.*  If you made it this far then you know the fundamentals of real-time stream processing with Hazelcast!
+### Congratulations!
+If you made it this far then you know the fundamentals of real-time stream processing with Hazelcast!
+
+> **NOTE** This project contains many useful helpers.  Please feel free to study it and use it as a template for your 
+> own projects.
 
 
 
