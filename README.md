@@ -63,7 +63,7 @@ Data in Hazelcast clusters can be accessed via SQL.  For more details, see https
 > Run `select * from machine_profiles` in the SQL Browser.
 
 You will see that for each machine there is a serial number, information about the location and the warning and 
-critical temperature limits for that particulare machine.
+critical temperature limits for that particular machine.
 
 ![profiles](resources/profiles.png)
 
@@ -129,8 +129,8 @@ short bitTemp = newEvent.f1();
 
 > **TO DO**
 > 
-> Open up  the *hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline* class in the *monitoring-pipeline*
-project and review the code there.  
+> In your IDE, navigate to the *monitoring-pipeline* project.  Open up  the 
+> *hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline* class and review the code there.  
 
 The main method, shown below, is boilerplate that helps with deploying the job to a cluster.
 You do not need to change this.
@@ -162,10 +162,15 @@ object.  You then build up the Pipeline by adding stages to it.
 > Hazelcast classes should not be included because they are already on the server.
 > - Code with *com.hazelcast* package names cannot be deployed to a *Viridian* cluster.
 
+Currently, the *createPipeline* method contains only a source (reading from the *machine_events* map) and a sink, 
+which simply logs the events to the console.  This can be useful during debugging. In the next step, you'll make a 
+small change to the Pipeline and walk through a typical code/test cycle.
+
+
 > **TO DO**
 > 
-> Modify the logging output in the *TemperatureMonitorPipeline* and build the *monitoring-pipeline* project.
-> Then deploy it to the cluster using the *submit_job* docker compose service.
+> Make a small change to the output format in the *writeTo* statement just so we can walk through building and 
+> deploying a pipeline.  After you've made the change, you can deploy the pipeline using the commands below.
 > ```shell
 > cd monitoring-pipeline
 > mvn package
@@ -207,6 +212,10 @@ You can also see machine control events in the "event_generator" log.
 docker compose logs --follow event_generator
 ```
 
+> **NOTE**
+> If at any point you git stuck, you can refer to the solution which you will find in the
+> *hazelcast.platform.labs.machineshop.solutions* package.
+
 # Step 7: Deploy  to Viridian
 
 In this step, you will deploy your temperature monitoring Pipeline to a Viridian cluster 
@@ -215,7 +224,10 @@ and connect the UI, refdata loader and event_generator to it as well.
 > **TO DO** 
 > 
 > If you haven't already done so, navigate to https://viridian.hazelcast.com, create an 
-> account, and create a new "Production" cluster.  This will deploy a 3 node cluster.
+> account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  After the cluster is deployed, 
+> close the "Quick Connection Guide" as shown below.
+
+![close_connect](resources/close_connect.png)
 
 You will need to enable event journals on the "machine_events" map before deploying the Pipeline. The 
 "refdata_loader" service will automatically do the required setup but it requires that certain classes be available 

@@ -93,13 +93,19 @@ public class TemperatureMonitorPipeline {
          * Group the events by serial number. For each serial number, compute the average temperature over a 10s
          * tumbling window.
          *
+         * INPUT: Map.Entry<String, GenericRecord>
+         *        The GenericRecord is a MachineStatusEvent. For the specific field names, see the comment
+         *        at the top of this method.
+         *
+         * OUTPUT: KeyedWindowResult<String, Double>
+         *
          * The general template for aggregation looks like this:
          *
          * StreamStage<KeyedWindowResult<String, Double>> averageTemps = statusEvents.groupingKey( GET KEY LAMBDA )
          *                                  .window( WINDOW DEFINITION )
          *                                  .aggregate(AggregateOperations.averagingLong( GET BIT TEMP LAMBDA);
          *
-         * See:
+         * For available Window Definitions and Aggregations, see:
          *   https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/WindowDefinition.html
          *   https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/aggregate/AggregateOperations.html
          *
@@ -110,12 +116,26 @@ public class TemperatureMonitorPipeline {
          * Look up the machine profile for this machine from the machine_profiles map.  Output a
          * 4-tuple (serialNum, avg temp, warning temp, critical_temp)
          *
-         * Note that the incoming event already has a key associated with it (serial number).  mapUsingImap
-         * on a StreamStageWithKey will automatically use they key of the event to do the lookup on the map.
+         * INPUT: StreamStage<KeyedWindowResult<String, Double>>
+         *        streamStage.getKey() is the serial number
+         *        streamStage.getValue() is the averageTemperature over the window.
+         *
+         * OUTPUT: Tuple4<String, Double, Short, Short>
+         *         The members of the Tuple4 are: serial number, average temp, warning temp, critical temp)
+         *         The last 2 values are looked up from the machine_profiles map using the mapUsingIMap method.
+         *
+         * The incoming event already has a key associated with it (serial number).  It is a StreamStageWithKey.
+         * StreamStageWithKey.mapUsingImap will automatically use they key to do the lookup on the map.  You do
+         * not need to supply a "getKey" function.  Instead, you supply a BiFunction which takes the input event
+         * and the value returned from the map lookup and returns a new event.
+         *
+         * In this case, the value in the machine_profiles map is a GenericRecord of a MachineProfile.  For
+         * the available field names, see the comment at the top of this method.
+         *
          * The general form is:
          *
          * StreamStage<Tuple4<String,Double,Short,Short>> temperaturesAndLimits
-         *      = averageTemps.mapUsingIMap( (w, p) -> LAMBDA RETURNING Tuple4)
+         *      = averageTemps.mapUsingIMap( Names.PROFILE_MAP_NAME, (w, p) -> LAMBDA RETURNING Tuple4)
          *
          * where p is a MachineProfile GenericRecord
          *       w is the KeyedWindowResult from the previous stage.
@@ -131,6 +151,9 @@ public class TemperatureMonitorPipeline {
          * Using a simple "map" stage, categorize the temperature as "green", "red" or "orange" and
          * return a Tuple2 (serialNum, color).
          *
+         * INPUT: Tuple4<String,Double,Short,Short) i.e.  (serialNum, avg temp, warning temp, critical_temp)
+         * OUTPUT: Tuple2<String,String> i.e. (serialNumber, red/orange/green)
+         *
          * See:
          *   the "categorizeTemp" function at the top of this file
          *   "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStage.html
@@ -138,9 +161,13 @@ public class TemperatureMonitorPipeline {
         StreamStage<Tuple2<String,String>> labels = null;
 
         /*
-         * We only want to write to the output map if the current color has changed.  This prevents flooding the
+         * We  want to write to the output map only if the current color has changed.  This prevents flooding the
          * map listeners with irrelevant events.  We can use   StreamStageWithKey.filterStateful to do this.
          * The filter will remember the last value for each key.
+         *
+         * INPUT: Tuple2<String,String>  i.e. (serialNumber, red/orange/green)
+         * OUTPUT: Tuple2<String,String>  i.e. (serialNumber, red/orange/green)
+         *         OR nothing if there is no change relative to the previous event with the same serial number
          *
          * The CurrentState class in this file should be used to hold the remembered value.
          *
@@ -150,12 +177,12 @@ public class TemperatureMonitorPipeline {
          *   labels.groupingKey(GET SERIAL NUM LAMBDA)
          *         .filterStateful(CurrentState::new, (cs, event) -> FILTER LAMBDA)
          *
-         * Where cs is the instance of current state related to this key
-         *       event is the Tuple2 event from the previous stage.
+         * Where cs is the instance of CurrentState related to this key
+         *       event is the Tuple2 input event
          *
          * Note:
          *    When the incoming value is not equal to the previous value, don't forget to update the CurrentState
-         *    object with the new value
+         *    object with the new value!
          *
          * See:
          *    "filterStateful" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html
@@ -166,7 +193,10 @@ public class TemperatureMonitorPipeline {
          * Finally, we can sink the results directly to the "machine_controls" map.  Tuple2<K,V> also implements
          * Map.Entry<K,V> so we can just supply it directly to the IMap Sink.
          *
-         * Create a Sink using Sinks.map (see reference) then finish the pipeline with
+         * INPUT: Tuple2<String,String>  i.e. (serialNumber, red/orange/green)
+         * OUTPUT: None
+         *
+         * Create a Sink for the "machine_controls" map using Sinks.map (see reference) then finish the pipeline with
          * changedLabels.writeTo(machineControlsSink);
          *
          * See:
