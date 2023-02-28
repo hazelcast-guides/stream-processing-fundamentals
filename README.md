@@ -253,7 +253,7 @@ Next we will obtain all of the keys and configuration parameters required to mak
 > In the Viridian Console, click on "Connect Cluster" next to your cluster, then select "Advanced Setup" and 
 > Download the keystore file for your cluster as shown below.  Unzip the downloaded file and place it directly 
 > inside of the "stream-processing-fundamentals" directory.  You will also need the discovery 
-> token, truststore password and cluster id that are displayed on the that screen. 
+> token, truststore password and cluster id that are displayed on that screen. 
 
 ![connect](resources/connect.png)
 
