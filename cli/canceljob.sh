@@ -2,4 +2,4 @@
 set -e
 hz-cli cancel \
     -t=dev@hz   \
-    `cat /project/cli/jobname.txt`
+    `cat /project/job/jobname.txt`
