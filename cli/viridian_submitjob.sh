@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-mkdir /project/job
+mkdir -p /project/job
 JOBNAME=temp_monitor_`date +%H%M%S`
 hz-cli -f=/project/cli/viridian.client.yaml   \
     submit \
