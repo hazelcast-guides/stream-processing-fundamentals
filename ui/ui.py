@@ -170,9 +170,9 @@ app.layout = html.Div(children=[
         figure=fig
     ),
     html.Label(children="Location", htmlFor='location_input'),
-    dcc.Input(id='location_input', placeholder='Los Angeles', value='', type='text', debounce=True),
+    dcc.Input(id='location_input', value='San Antonio', type='text', debounce=True),
     html.Label(children="Block", htmlFor='block_input'),
-    dcc.Input(id='block_input', value='', placeholder='B', type='text', debounce=True),
+    dcc.Input(id='block_input', value='A',  type='text', debounce=True),
     html.Div(id='matching_sns', children=""),
     dcc.Interval(id="timer", interval=2500, n_intervals=0)
 ], className='container')
