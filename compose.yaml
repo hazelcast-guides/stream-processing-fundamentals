@@ -21,7 +21,7 @@ services:
       - hznet
 
   submit_job:
-    image: hazelcast/hazelcast:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
       - ".:/project"
     command: /project/cli/submitjob.sh
@@ -31,7 +31,7 @@ services:
       - disabled
 
   cancel_job:
-    image: hazelcast/hazelcast:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
       - ".:/project"
     command: /project/cli/canceljob.sh
