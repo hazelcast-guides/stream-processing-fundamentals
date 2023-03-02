@@ -164,7 +164,8 @@ def requery(location: str, block: str):
 
 
 app.layout = html.Div(children=[
-    html.H1(children='Hazelcast Machine Shop Monitor'),
+    html.Img(src='assets/hazelcast-horz-flat-md.png', className="centered-image"),
+    html.H2(children='Machine Shop Monitor'),
     dcc.Graph(
         id='main-graph',
         figure=fig
