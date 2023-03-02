@@ -87,7 +87,7 @@ public class MachineProfile implements Portable {
     /////// for generating fake data
 
     private static final Random random = new Random();
-    private static final String[] companies = new String [] {"Breton","Fabplus", "Laguna Tools", "Snapmaker","Machinecraft", "Multicam", "OZ Machine"};
+    private static final String[] companies = new String [] {"Cyberdyne","Fabric8", "Catalina Tools", "Lex Corp","CNC Tool Works", "Omni Corp", "General Machine Tools"};
 
     private static final String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String digits = "0123456789";
