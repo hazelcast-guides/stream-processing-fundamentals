@@ -6,7 +6,7 @@ services:
       - viridian.env
     environment:
       CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
-      MACHINE_COUNT: 10
+      MACHINE_COUNT: 1000
       SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
       - ".:/project"
@@ -36,8 +36,8 @@ services:
     env_file:
       - viridian.env
     environment:
-      MACHINE_COUNT: 10
-      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
+      MACHINE_COUNT: 1000
+      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_medium.csv
     volumes:
       - ".:/project"
     networks:
@@ -49,7 +49,7 @@ services:
     env_file:
       - viridian.env
     environment:
-      MACHINE_COUNT: 10
+      MACHINE_COUNT: 1000
     volumes:
       - ".:/project"
     networks:
