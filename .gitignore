@@ -5,3 +5,4 @@ __pycache__/
 venv/
 hzcloud_*_keys/
 job/
+diagnostics/
