@@ -94,7 +94,7 @@ public class TemperatureMonitorPipelineSolution {
          *
          * INPUT: Map.Entry<String, GenericRecord>
          *        The GenericRecord is a MachineStatusEvent. For the specific field names, see the comment
-         *        at the top of this method.
+         *        at the top of this class.
          *
          * OUTPUT: KeyedWindowResult<String, Double>
          *
@@ -127,18 +127,22 @@ public class TemperatureMonitorPipelineSolution {
          *         The members of the Tuple4 are: serial number, average temp, warning temp, critical temp)
          *         The last 2 values are looked up from the machine_profiles map using the mapUsingIMap method.
          *
-         * The incoming event already has a key associated with it (serial number).  It is a StreamStageWithKey.
-         * StreamStageWithKey.mapUsingImap will automatically use they key to do the lookup on the map.  You do
-         * not need to supply a "getKey" function.  Instead, you supply a BiFunction which takes the input event
-         * and the value returned from the map lookup and returns a new event.
+         * We would like for the map lookup to be local which means each event needs to be routed to the
+         * machine that owns that machine_profile entry.  This is accomplished by setting a grouping key
+         * using the groupingKey method.  The groupingKey method returns a  StreamStageWithKey.  Since the
+         * key is already known, StreamStageWithKey.mapUsingImap will automatically use it to do the lookup on the map.
+         * As opposed to StreamStage.mapUsingIMap, you do not need to supply a "getKey" function.  Instead, you supply
+         * a BiFunction which takes the input even and the value returned from the map lookup and returns a new event.
          *
          * In this case, the value in the machine_profiles map is a GenericRecord of a MachineProfile.  For
-         * the available field names, see the comment at the top of this method.
+         * the available field names, see the comment at the top of this class.
          *
          * The general form is:
          *
          * StreamStage<Tuple4<String,Double,Short,Short>> temperaturesAndLimits
-         *      = averageTemps.mapUsingIMap( Names.PROFILE_MAP_NAME, (w, p) -> LAMBDA RETURNING Tuple4)
+         *      = averageTemps
+         *           .groupingKey( GET KEY LAMBDA)
+         *           ,mapUsingIMap( Names.PROFILE_MAP_NAME, (w, p) -> LAMBDA RETURNING Tuple4)
          *
          * where p is a MachineProfile GenericRecord
          *       w is the KeyedWindowResult from the previous stage.
@@ -162,7 +166,7 @@ public class TemperatureMonitorPipelineSolution {
          * OUTPUT: Tuple2<String,String> i.e. (serialNumber, red/orange/green)
          *
          * See:
-         *   the "categorizeTemp" function at the top of this file
+         *   the "categorizeTemp" function at the top of this class
          *   "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStage.html
          */
         StreamStage<Tuple2<String,String>> labels =
