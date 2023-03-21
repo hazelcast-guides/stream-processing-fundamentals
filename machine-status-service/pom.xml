@@ -33,9 +33,19 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.hazelcast.solutions</groupId>
+            <artifactId>common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>hazelcast.platform.solutions</groupId>
+            <artifactId>spring-hazelcast-pipeline-dispatcher</artifactId>
+            <version>1.1.0</version>
         </dependency>
     </dependencies>
     <build>

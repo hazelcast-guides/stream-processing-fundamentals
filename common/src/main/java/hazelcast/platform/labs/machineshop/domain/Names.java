@@ -18,6 +18,8 @@ public class Names {
 
     public static final String SYSTEM_ACTIVITIES_MAP_NAME = "system_activities";
 
+    public static final String STATUS_SUMMARY_MAP_NAME = "machine_status_summary";
+
     public static class ProfileMapConfigurationTask implements Runnable, HazelcastInstanceAware, Serializable {
 
         private transient HazelcastInstance hz;

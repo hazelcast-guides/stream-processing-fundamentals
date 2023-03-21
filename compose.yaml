@@ -20,25 +20,19 @@ services:
     networks:
       - hznet
 
-  submit_job:
+  submit_aggregation_job:
     image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
       - ".:/project"
-    command: /project/cli/submitjob.sh
+    command: >
+      hz-cli submit 
+          -v 
+          -c=hazelcast.platform.labs.machineshop.AggregationPipeline 
+          -t=dev@hz   
+          -n=aggregator 
+          /project/monitoring-pipeline/target/monitoring-pipeline-1.0-SNAPSHOT.jar
     networks:
     - hznet
-    profiles:
-      - disabled
-
-  cancel_job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
-    volumes:
-      - ".:/project"
-    command: /project/cli/canceljob.sh
-    networks:
-      - hznet
-    profiles:
-      - disabled
 
   refdata_loader:
     image: openjdk:11
@@ -76,6 +70,18 @@ services:
     networks:
       - hznet
 
+#  status_service:
+#    image: openjdk:11
+#    command: java -jar /project/machine-status-service/target/machine-status-service-1.0-SNAPSHOT.jar
+#    environment:
+#      HZ_SERVERS: hz
+#      HZ_CLUSTER_NAME: dev
+#    volumes:
+#      - ".:/project"
+#    ports:
+#      - "8888:8080"
+#    networks:
+#      - hznet
 
 networks:
   hznet: 

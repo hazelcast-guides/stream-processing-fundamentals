@@ -7,6 +7,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import hazelcast.platform.labs.machineshop.domain.MachineProfile;
 import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
+import hazelcast.platform.labs.machineshop.domain.MachineStatusSummary;
 import hazelcast.platform.labs.machineshop.domain.Names;
 import hazelcast.platform.labs.viridian.ViridianConnection;
 
@@ -53,6 +54,7 @@ public class RefdataLoader {
 
     private static final List<Profile> profiles = new ArrayList<>();
 
+    // TODO value format should be portable, why does this work ?
     private static final String EVENT_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.EVENT_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
             "eventTime BIGINT, " +
@@ -67,6 +69,7 @@ public class RefdataLoader {
             "'valueFormat' = 'compact'," +
             "'valueCompactTypeName' = 'hazelcast.platform.labs.machineshop.domain.MachineStatusEvent')";
 
+    // TODO value format should be portable, why does this work ?
     private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
             "location VARCHAR, " +
@@ -95,6 +98,15 @@ public class RefdataLoader {
     private static final String MACHINE_PROFILE_LOCATION_INDEX_SQL =
              "CREATE INDEX IF NOT EXISTS MACHINE_LOCATION_INDEX ON " + Names.PROFILE_MAP_NAME + " (location) " +
                      "TYPE HASH;";
+
+    private static final String MACHINE_STATUS_SUMMARY_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.STATUS_SUMMARY_MAP_NAME +
+            "( serialNumber VARCHAR, averageBitTemp10s SMALLINT) " +
+            "TYPE IMap OPTIONS (" +
+            "'keyFormat' = 'java'," +
+            "'keyJavaClass' = 'java.lang.String'," +
+            "'valueFormat' = 'portable'," +
+            "'valuePortableFactoryId' = '" + MachineShopPortableFactory.ID  + "'," +
+            "'valuePortableClassId'='" + MachineStatusSummary.ID + "')";
 
     private static String getRequiredProp(String propName){
         String prop = System.getenv(propName);
@@ -175,6 +187,7 @@ public class RefdataLoader {
         hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
         hzClient.getSql().execute(EVENT_MAPPING_SQL);
         hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
+        hzClient.getSql().execute(MACHINE_STATUS_SUMMARY_MAPPING_SQL);
         hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
         System.out.println("Initialized SQL Mappings");
     }
