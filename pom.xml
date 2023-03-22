@@ -33,8 +33,7 @@
         <module>common</module>
         <module>refdata-loader</module>
         <module>event-generator</module>
-        <module>monitoring-pipeline</module>
+        <module>pipelines</module>
         <module>machine-status-service</module>
-        <module>machine-status-service-pipeline</module>
     </modules>
 </project>

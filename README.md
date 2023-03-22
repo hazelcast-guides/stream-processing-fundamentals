@@ -129,7 +129,7 @@ short bitTemp = newEvent.f1();
 
 > **TO DO**
 > 
-> In your IDE, navigate to the *monitoring-pipeline* project.  Open up  the 
+> In your IDE, navigate to the *pipelines* project.  Open up  the 
 > *hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline* class and review the code there.  
 
 The main method, shown below, is boilerplate that helps with deploying the job to a cluster.
@@ -172,7 +172,7 @@ small change to the Pipeline and walk through a typical code/test cycle.
 > Make a small change to the output format in the *writeTo* statement just so we can walk through building and 
 > deploying a pipeline.  After you've made the change, you can deploy the pipeline using the commands below.
 > ```shell
-> cd monitoring-pipeline
+> cd pipelines
 > mvn package
 > cd ..
 > docker compose run submit_job

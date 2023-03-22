@@ -30,9 +30,25 @@ services:
           -c=hazelcast.platform.labs.machineshop.AggregationPipeline 
           -t=dev@hz   
           -n=aggregator 
-          /project/monitoring-pipeline/target/monitoring-pipeline-1.0-SNAPSHOT.jar
+          /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar
     networks:
     - hznet
+
+  submit_summary_service_job:
+    image: hazelcast/hazelcast-enterprise:5.2.1
+    volumes:
+      - ".:/project"
+    command: >
+      hz-cli submit 
+          -v 
+          -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline 
+          -t=dev@hz   
+          -n=status_service
+          /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
+          machinestatus_request 
+          machinestatus_response
+    networks:
+      - hznet
 
   refdata_loader:
     image: openjdk:11
@@ -70,18 +86,23 @@ services:
     networks:
       - hznet
 
-#  status_service:
-#    image: openjdk:11
-#    command: java -jar /project/machine-status-service/target/machine-status-service-1.0-SNAPSHOT.jar
-#    environment:
-#      HZ_SERVERS: hz
-#      HZ_CLUSTER_NAME: dev
-#    volumes:
-#      - ".:/project"
-#    ports:
-#      - "8888:8080"
-#    networks:
-#      - hznet
+  status_service:
+    image: openjdk:11
+    command: >
+      java -Dhazelcast.client.config=/project/config/hazelcast-client.yaml 
+        -jar /project/machine-status-service/target/machine-status-service-1.0-SNAPSHOT.jar
+    environment:
+      HZCLIENT_INSTANCENAME: status_service
+      HZ_SERVERS: hz
+      HZ_CLUSTER_NAME: dev
+      hazelcast.pipeline.dispatcher.embed_hazelcast: false
+      hazelcast.pipeline.dispatcher.request_timeout_ms: 2000
+    volumes:
+      - ".:/project"
+    ports:
+      - "8888:8080"
+    networks:
+      - hznet
 
 networks:
   hznet: 
