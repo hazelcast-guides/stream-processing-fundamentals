@@ -20,7 +20,7 @@ services:
     networks:
       - hznet
 
-  submit_aggregation_job:
+  submit-aggregation-job:
     image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
       - ".:/project"
@@ -34,7 +34,7 @@ services:
     networks:
     - hznet
 
-  submit_summary_service_job:
+  submit-summary-service-job:
     image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
       - ".:/project"
@@ -50,7 +50,7 @@ services:
     networks:
       - hznet
 
-  refdata_loader:
+  refdata-loader:
     image: openjdk:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
@@ -63,7 +63,7 @@ services:
     networks:
       - hznet
 
-  event_generator:
+  event-generator:
     image: openjdk:11
     command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
     environment:
@@ -86,7 +86,7 @@ services:
     networks:
       - hznet
 
-  status_service:
+  status-service:
     image: openjdk:11
     command: >
       java -Dhazelcast.client.config=/project/config/hazelcast-client.yaml 
@@ -103,6 +103,21 @@ services:
       - "8888:8080"
     networks:
       - hznet
+
+  performance-test:
+    build:
+      context: performance-test
+    command: -f /project/performance-test/perftest.py
+    environment:
+      HZ_SERVERS: hz
+      HZ_CLUSTER_NAME: dev
+    volumes:
+      - ".:/project"
+    ports:
+      - "8089:8089"
+    networks:
+      - hznet
+
 
 networks:
   hznet: 
