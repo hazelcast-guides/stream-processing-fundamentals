@@ -15,7 +15,7 @@ import hazelcast.platform.labs.machineshop.domain.StatusServiceResponse;
 
 import java.util.Map;
 
-public class MachineStatusServicePipeline {
+public class MachineStatusServicePipeline2 {
 
     private static String categorizeTemp(short temp, short warningLimit, short criticalLimit){
         String result;
@@ -70,8 +70,8 @@ public class MachineStatusServicePipeline {
                                 (entry, gr) -> Tuple4.tuple4(
                                         entry.getKey(),
                                         entry.getValue(),
-                                        gr.getInt16("warningTemp"),
-                                        gr.getInt16("criticalTemp")
+                                        gr != null ? gr.getInt16("warningTemp") : 0,
+                                        gr != null ? gr.getInt16("criticalTemp"): 0
                         ));
 
         // now look up the current average temperature and append that to the input event
@@ -85,7 +85,7 @@ public class MachineStatusServicePipeline {
                                 t4.f1(),
                                 t4.f2(),
                                 t4.f3(),
-                                summary.getInt16("averageBitTemp10s")
+                                summary != null ? summary.getInt16("averageBitTemp10s") : -1
         ));
 
         // now format the response as a StatusServiceResponse GenericRecord

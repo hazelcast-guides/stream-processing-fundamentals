@@ -1,0 +1,6 @@
+{
+  "machinestatus": {
+      "versions" : ["v1"],
+      "percentages" : [1.0]
+    }
+}

@@ -3,6 +3,6 @@ target/
 .idea/
 __pycache__/
 venv/
-hzcloud_*_keys/
+hzcloud*keys/
 job/
 diagnostics/

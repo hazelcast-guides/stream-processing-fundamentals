@@ -41,17 +41,35 @@ services:
     command: >
       hz-cli submit 
           -v 
-          -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline 
+          -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline1 
           -t=dev@hz   
-          -n=status_service
+          -n=status_service_1
           /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
-          machinestatus_request 
+          machinestatus_v1_request 
           machinestatus_response
     networks:
       - hznet
 
+  submit-summary-service-job-2:
+    image: hazelcast/hazelcast-enterprise:5.2.1
+    volumes:
+      - ".:/project"
+    command: >
+      hz-cli submit 
+          -v 
+          -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline2 
+          -t=dev@hz   
+          -n=status_service_2
+          /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
+          machinestatus_v2_request 
+          machinestatus_response
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
   refdata-loader:
-    image: openjdk:11
+    image: amazoncorretto:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
       HZ_SERVERS: hz
@@ -64,7 +82,7 @@ services:
       - hznet
 
   event-generator:
-    image: openjdk:11
+    image: amazoncorretto:11
     command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
     environment:
       HZ_SERVERS: hz
@@ -87,7 +105,7 @@ services:
       - hznet
 
   status-service:
-    image: openjdk:11
+    image: amazoncorretto:11
     command: >
       java -Dhazelcast.client.config=/project/config/hazelcast-client.yaml 
         -jar /project/machine-status-service/target/machine-status-service-1.0-SNAPSHOT.jar
@@ -117,6 +135,43 @@ services:
       - "8089:8089"
     networks:
       - hznet
+
+  load-routing-config-1:
+    image: amazoncorretto:11
+    command: >
+      java -cp /project/routing-tools/target/dependency/*
+           hazelcast.platform.solutions.pipeline.dispatcher.RoutingConfigTool load 
+           --hz-cluster-name dev --hz-servers hz:5701 --input /project/config/routing_1.json
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+
+  load-routing-config-2:
+    image: amazoncorretto:11
+    command: >
+      java -cp /project/routing-tools/target/dependency/*
+           hazelcast.platform.solutions.pipeline.dispatcher.RoutingConfigTool load 
+           --hz-cluster-name dev --hz-servers hz:5701 --input /project/config/routing_2.json
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
+  dump-routing-config:
+    image: amazoncorretto:11
+    command: >
+      java -cp /project/routing-tools/target/dependency/*
+           hazelcast.platform.solutions.pipeline.dispatcher.RoutingConfigTool dump 
+           --hz-cluster-name dev --hz-servers hz:5701
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+    profiles:
+      - disabled
 
 
 networks:

@@ -49,7 +49,7 @@ public class AggregationPipeline {
                 .aggregate(AggregateOperations.averagingLong(item -> item.getValue().getInt16("bitTemp")))
                 .setName("Average Temps");
 
-        // TODO - could I get away with not using GenericRecord here since or will it cause class loading problems ?
+        // TODO - could I get away with not using GenericRecord here or will it cause class loading problems ?
         //        I will never read this on the server side so it might be OK
 
         /*

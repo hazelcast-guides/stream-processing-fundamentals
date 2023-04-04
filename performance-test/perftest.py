@@ -13,7 +13,8 @@ from hazelcast.proxy.map import BlockingMap
 import viridian
 
 
-# TODO most of the Hazelcast related code here should be pulled out into a common module
+# TODO most of the Hazelcast related code here has been copied from the ui and  should be pulled out into a common
+#  module
 def get_required_env(name: str) -> str:
     if name not in os.environ:
         sys.exit(f'Please provide the "{name} environment variable."')
