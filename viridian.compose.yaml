@@ -72,6 +72,8 @@ services:
       - ".:/project"
     networks:
       - hznet
+    profiles:
+      - disabled
 
 # works
   event-generator:
@@ -81,19 +83,6 @@ services:
       - viridian.env
     environment:
       MACHINE_COUNT: 10
-    volumes:
-      - ".:/project"
-    networks:
-      - hznet
-
-# works
-  ui:
-    build:
-      context: ./ui
-    env_file:
-      - viridian.env
-    ports:
-      - "8050:8050"
     volumes:
       - ".:/project"
     networks:
@@ -121,7 +110,7 @@ services:
   performance-test:
     build:
       context: performance-test
-    command: -f /project/performance-test/perftest.py
+    command: /project/performance-test/perftest.sh
     env_file:
       - viridian.env
     volumes:
@@ -130,6 +119,7 @@ services:
       - "8089:8089"
     networks:
       - hznet
+
 #works
   load-routing-config-1:
     image: amazoncorretto:11
