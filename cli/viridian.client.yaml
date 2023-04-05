@@ -20,3 +20,10 @@ hazelcast-client:
         trustStorePassword: $ENV{VIRIDIAN_PASSWORD}
   metrics:
     enabled: true
+  connection-strategy:
+    async-start: false
+    reconnect-mode: ON
+  serialization:
+    portable-factories:
+      - factory-id: 1
+        class-name: hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory

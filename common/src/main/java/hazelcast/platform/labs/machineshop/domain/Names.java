@@ -58,4 +58,27 @@ public class Names {
             this.hz = hazelcastInstance;
         }
     }
+
+    public static class RequestMapConfigurationTask implements Runnable, HazelcastInstanceAware, Serializable {
+
+        private transient HazelcastInstance hz;
+        @Override
+        public void run() {
+            hz.getConfig().addMapConfig(new MapConfig("*_request")
+                    .setInMemoryFormat(InMemoryFormat.BINARY)
+                    .setBackupCount(1)
+                    .setEventJournalConfig(
+                            new EventJournalConfig()
+                                    .setEnabled(true)
+                                    .setCapacity(3000000)
+                                    .setTimeToLiveSeconds(0)
+                    )
+            );
+        }
+
+        @Override
+        public void setHazelcastInstance(HazelcastInstance hazelcastInstance) {
+            this.hz = hazelcastInstance;
+        }
+    }
 }

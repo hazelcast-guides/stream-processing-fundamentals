@@ -195,6 +195,7 @@ public class RefdataLoader {
     private static void configureMaps(HazelcastInstance hzClient){
         hzClient.getExecutorService("default").execute(new Names.ProfileMapConfigurationTask());
         hzClient.getExecutorService("default").execute(new Names.EventMapConfigurationTask());
+        hzClient.getExecutorService("default").execute(new Names.RequestMapConfigurationTask());
         System.out.println("Initialized Map Configurations");
     }
     public static void main(String []args){

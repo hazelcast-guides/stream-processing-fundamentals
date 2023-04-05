@@ -1,60 +1,92 @@
 services:
-
-  submit_job:
+#  works
+  submit-aggregation-job:
     image: hazelcast/hazelcast-enterprise:5.2.1
-    env_file:
-      - viridian.env
-    environment:
-      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
-      MACHINE_COUNT: 1000
-      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
       - ".:/project"
-    command: /project/cli/viridian_submitjob.sh
+    environment:
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
+    env_file:
+      - viridian.env
+    command: >
+      hz-cli -f=/project/cli/viridian.client.yaml submit 
+          -v 
+          -c=hazelcast.platform.labs.machineshop.AggregationPipeline 
+          -n=aggregator 
+          /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar
     networks:
     - hznet
-    profiles:
-      - disabled
 
-  cancel_job:
+# works
+  submit-summary-service-job:
     image: hazelcast/hazelcast-enterprise:5.2.1
-    env_file:
-      - viridian.env
-    environment:
-      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
-    command: /project/cli/viridian_canceljob.sh
+    environment:
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
+    env_file:
+      - viridian.env
+    command: >
+      hz-cli -f=/project/cli/viridian.client.yaml submit 
+          -v 
+          -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline1 
+          -n=status_service_1
+          /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
+          machinestatus_v1_request 
+          machinestatus_response
+    networks:
+      - hznet
+
+#works
+  submit-summary-service-job-2:
+    image: hazelcast/hazelcast-enterprise:5.2.1
+    volumes:
+      - ".:/project"
+    environment:
+      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
+    env_file:
+      - viridian.env
+    command: >
+      hz-cli -f=/project/cli/viridian.client.yaml submit 
+          -v 
+          -c=hazelcast.platform.labs.machineshop.MachineStatusServicePipeline2 
+          -n=status_service_2
+          /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar 
+          machinestatus_v2_request 
+          machinestatus_response
     networks:
       - hznet
     profiles:
       - disabled
 
-  refdata_loader:
-    image: openjdk:11
+#works
+  refdata-loader:
+    image: amazoncorretto:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     env_file:
       - viridian.env
     environment:
-      MACHINE_COUNT: 1000
-      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_medium.csv
+      MACHINE_COUNT: 10
+      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
     volumes:
       - ".:/project"
     networks:
       - hznet
 
-  event_generator:
-    image: openjdk:11
+# works
+  event-generator:
+    image: amazoncorretto:11
     command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
     env_file:
       - viridian.env
     environment:
-      MACHINE_COUNT: 1000
+      MACHINE_COUNT: 10
     volumes:
       - ".:/project"
     networks:
       - hznet
-  
+
+# works
   ui:
     build:
       context: ./ui
@@ -66,6 +98,86 @@ services:
       - ".:/project"
     networks:
       - hznet
+
+# works
+  status-service:
+    image: amazoncorretto:11
+    command: >
+      java -Dhazelcast.client.config=/project/cli/viridian.client.yaml 
+        -jar /project/machine-status-service/target/machine-status-service-1.0-SNAPSHOT.jar
+    env_file:
+      - viridian.env
+    environment:
+      HZCLIENT_INSTANCENAME: status_service
+      hazelcast.pipeline.dispatcher.embed_hazelcast: false
+      hazelcast.pipeline.dispatcher.request_timeout_ms: 2000
+    volumes:
+      - ".:/project"
+    ports:
+      - "8888:8080"
+    networks:
+      - hznet
+
+  performance-test:
+    build:
+      context: performance-test
+    command: -f /project/performance-test/perftest.py
+    env_file:
+      - viridian.env
+    volumes:
+      - ".:/project"
+    ports:
+      - "8089:8089"
+    networks:
+      - hznet
+#works
+  load-routing-config-1:
+    image: amazoncorretto:11
+    env_file:
+      - viridian.env
+    command: >
+      java -cp /project/common/target/common-1.0-SNAPSHOT.jar:/project/routing-tools/target/dependency/*
+           -Dhazelcast.client.config=/project/cli/viridian.client.yaml 
+           hazelcast.platform.solutions.pipeline.dispatcher.RoutingConfigTool load 
+          --input /project/config/routing_1.json
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+#works
+  load-routing-config-2:
+    image: amazoncorretto:11
+    env_file:
+      - viridian.env
+    command: >
+      java -cp /project/common/target/common-1.0-SNAPSHOT.jar:/project/routing-tools/target/dependency/*
+           -Dhazelcast.client.config=/project/cli/viridian.client.yaml 
+           hazelcast.platform.solutions.pipeline.dispatcher.RoutingConfigTool load 
+          --input /project/config/routing_2.json
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
+#works
+  dump-routing-config:
+    image: amazoncorretto:11
+    env_file:
+      - viridian.env
+    command: >
+      java -cp /project/common/target/common-1.0-SNAPSHOT.jar:/project/routing-tools/target/dependency/* 
+           -Dhazelcast.client.config=/project/cli/viridian.client.yaml 
+           hazelcast.platform.solutions.pipeline.dispatcher.RoutingConfigTool dump 
+
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+    profiles:
+      - disabled
+
 
 networks:
   hznet: 
