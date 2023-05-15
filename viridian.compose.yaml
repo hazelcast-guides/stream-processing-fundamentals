@@ -1,5 +1,4 @@
 services:
-#  works
   submit-aggregation-job:
     image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
@@ -16,8 +15,9 @@ services:
           /project/pipelines/target/pipelines-1.0-SNAPSHOT.jar
     networks:
     - hznet
+    profiles:
+      - disabled
 
-# works
   submit-summary-service-job:
     image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
@@ -37,7 +37,6 @@ services:
     networks:
       - hznet
 
-#works
   submit-summary-service-job-2:
     image: hazelcast/hazelcast-enterprise:5.2.1
     volumes:
@@ -59,7 +58,6 @@ services:
     profiles:
       - disabled
 
-#works
   refdata-loader:
     image: amazoncorretto:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
@@ -75,7 +73,6 @@ services:
     profiles:
       - disabled
 
-# works
   event-generator:
     image: amazoncorretto:11
     command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
@@ -88,7 +85,6 @@ services:
     networks:
       - hznet
 
-# works
   status-service:
     image: amazoncorretto:11
     command: >
@@ -120,7 +116,6 @@ services:
     networks:
       - hznet
 
-#works
   load-routing-config-1:
     image: amazoncorretto:11
     env_file:
@@ -134,7 +129,7 @@ services:
       - ".:/project"
     networks:
       - hznet
-#works
+
   load-routing-config-2:
     image: amazoncorretto:11
     env_file:
@@ -151,7 +146,7 @@ services:
     profiles:
       - disabled
 
-#works
+
   dump-routing-config:
     image: amazoncorretto:11
     env_file:
@@ -167,7 +162,6 @@ services:
       - hznet
     profiles:
       - disabled
-
 
 networks:
   hznet: 
