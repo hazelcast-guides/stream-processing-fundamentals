@@ -229,23 +229,6 @@ and connect the UI, refdata loader and event_generator to it as well.
 
 ![close_connect](resources/close_connect.png)
 
-You will need to enable event journals on the "machine_events" map before deploying the Pipeline. The 
-"refdata_loader" service will automatically do the required setup but it requires that certain classes be available 
-on the server classpath.  
-
-> **TO DO**
-> 
-> In the Viridian console, select the cluster you will use and navigate to 
-> "Manage/Custom Classes".  Upload "common/target/common-1.0-SNAPSHOT.jar".
-
-![upload classes](resources/custom_classes.png)
-
-> **NOTE** This step is required because we are using the the Java Executor Service 
-> (https://docs.hazelcast.com/hazelcast/5.2/computing/executor-service#hide-nav) to perform 
-> dynamic configuration of the "machine_events" region in Viridian. With Pipeline deployments,
-> tranferring the classes to the cluster is handled automatically during deployment.  You do not need 
-> to manually upload the Pipeline.  
-
 Next we will obtain all of the keys and configuration parameters required to make a connection to Viridian.
 
 > **TO DO**
@@ -261,7 +244,7 @@ Next we will obtain all of the keys and configuration parameters required to mak
 
 > **TO DO**
 > 
-> Now edit "viridian.env" and provide the path to the key files, the discover token, the 
+> Now edit "viridian.env" and provide the path to the key files, the discovery token, the 
 > cluster id and the keystore password.
 > 
 > Once you have done this, you are ready to start the refdata_loader, event_generator and ui pointed to your 
