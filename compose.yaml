@@ -1,14 +1,17 @@
 services:
 
   hz:
-    image: hazelcast/hazelcast:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.1
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
       CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
+    ports:
+      - "5701:5701"
     networks:
       - hznet
+
 
   mc:
     image: hazelcast/management-center:5.2.1
@@ -21,7 +24,7 @@ services:
       - hznet
 
   submit_job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.1
     volumes:
       - ".:/project"
     command: /project/cli/submitjob.sh
@@ -31,7 +34,7 @@ services:
       - disabled
 
   cancel_job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.1
     volumes:
       - ".:/project"
     command: /project/cli/canceljob.sh

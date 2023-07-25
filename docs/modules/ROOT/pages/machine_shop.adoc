@@ -1,0 +1,204 @@
+////
+Make sure to rename this file to the name of your repository and add the filename to the README. This filename must not conflict with any existing tutorials.
+////
+
+// Describe the title of your article by replacing 'Tutorial template' with the page name you want to publish.
+= Java API Pipeline Example - Machine Shop tutorial
+// Add required variables
+:page-layout: tutorial
+:page-product: platform,  cloud
+:page-categories: Stream Processing, Joins, Java Pipeline API
+:page-lang: java 
+:page-enterprise: 
+:page-est-time: 60 min 
+:description: Use the Hazelcast Java pipeline API to build an application that monitors and responds to streaming telemetry from a machine shop. 
+
+{description}
+
+
+== Context
+
+We will be building a Hazelcast pipeline for monitoring and reacting to telemetry from a machine shop. We will do this with the Hazelcast Java Pipeline API.
+
+ACME operates 1000's of machines.  Each publishes several data points each second. Measurements include things like bit temperature and RPM. Breakage is expensive. We want to go beyond maintenance schedules and monitor the information in real time. Each machine has its own parameters for acceptable bit temperature, which are stored in a `machine_profiles`` IMap.  If excessive bit temperatures are caught in time, breakage can be averted by immediately reducing the cutting speed.  Our Pipeline will do this by sending "green" / "orange" / "red" signals to the machines via the `machine_controls` IMap.  A schematic of the lab is shown below.
+
+image::pipeline.png[schematic]
+
+== Before you Begin
+
+Before starting this tutorial, make sure that your computer has the following environment set up:
+
+* https://www.oracle.com/java/technologies/downloads/[Java Development Kit 11.0 or later]
+* A Java IDE of your choice (we suggest https://www.jetbrains.com/idea/[JetBrains IntelliJ IDEA] ) 
+* https://maven.apache.org/download.cgi[Maven 3.8 or later]
+* https://www.docker.com/[Docker]
+* https://docs.hazelcast.com/clc/5.3/install-clc[Hazelcast Command Line Client (CLC)]
+
+== Step 1. Starting and Validating the Lab Environment
+
+. Clone the https://github.com/hazelcast-guides/stream-processing-fundamentals[GitHub repository] for this tutorial.
+. In the top directory, run the following commands to start your lab environment.
++
+```shell
+mvn install
+docker compose up -d
+docker compose ps
+```
++
+You should see 4 services up and running.  You may also see a 5th service called `refdata_loader` which exits after it has loaded data into the `machine_profiles` map.
++
+Each service is described briefly below.
++
+|===
+| Service | Description
+
+| hz
+| A running instance of Hazelcast.
+
+| mc
+| The Hazelcast Management Center. Accessible at http://localhost:8080.
+
+| event_generator
+| Emulates traffic from a set of machines. Writes to `machine_events`. Listens to `machine_controls`.
+
+| ui
+| A Python program that listens to the `machine_events` map and displays temperature data graphically. Accessible at http://localhost:8050
+|===
+
+. Access the UI at http://localhost:8050. Specify a Location and Block to see a live display of the current temperature of a subset of machines.  Valid locations are "San Antonio" and "Los Angeles". Valid blocks are "A" and "B". Machines in block "A" are very likely to run hot. You should see something similar to the image below.
+
+image::UI.png[UI]
+
+== Step 2. Get to Know the Data
+Data in Hazelcast clusters can be accessed via SQL.  For more details, see https://docs.hazelcast.com/hazelcast/latest/sql/get-started-sql.
+
+. You have two options for accessing SQL commands: the Command Line Client (CLC) or the Management Center SQL Browser. 
+.. Option 1: Start the CLC. The default configuration will connect you to the Hazelcast instance in the Docker container.
++
+```shell
+clc
+```
+.. Option 2: Open up the management center (http://localhost:8080) and click on the "SQL Browser" button.
++
+image::MC_SQL.png[MC]
+
+. Use SQL to view the contents of the `machine_profiles` IMap. 
++
+```sql
+SELECT * from machine_profiles;
+```
++
+You will see that for each machine there is a serial number information about the location and the warning and critical temperature limits for that particular machine.
++
+image::profiles.png[profiles]
+
+. Use SQL to view the contents of the `machine_events` IMap. This is the actual data coming from the machines.
++
+```sql
+SELECT * from machine_events;
+```
+image::machine_events.png[events]
+
+[NOTE]
+====
+At any given time, only the latest event for each serial number appears in the map, however, the update events are all recorded into something called a `map journal` that can be used as input to a Pipeline.  You can verify that the map is constantly being updated by navigating to the `machine_events` map in Management Center and observing the number of put operations.
+====
+image::puts_and_entries.png[Puts]
+
+== Step 3: Learn About Data Formats
+
+=== Generic Records
+
+In this lab, you will be working with `MachineProfile` objects and `MachineEvents`, both of which are defined in
+ `common/src/main/java`.  However, those classes are not deployed with your job.  Intead , you will need to access
+them using GenericRecord.  An example of GenericRecord usage is shown below.
+
+```java
+GenericRecord machineEvent;
+short bitTemperature = machineEvent.getInt16("bitTemp");
+```
+
+It is a best practice to avoid using POJOs in Pipelines if that POJO will be stored in a Hazelcast map.  POJOs in IMaps can cause class loading problems.
+
+[NOTE]
+====
+ When using `Compact` or `Portable` serialization, Hazelcast automatically translates POJOs into `GenericRecord` when accessed on the server side.
+====
+
+=== Tuples
+
+As data proceeds through your pipeline its shape changes.  For example, you may look up the warning and critical temperatures for a particular machine and send them along with the original event to the next stage in the pipeline.  There is no need to create special container classes for situations like this, you can use Tuples
+instead.  Here is an example.
+
+```java
+// create a 3-tuple that consists of the serial number and bit temperature from the event
+// and the warning temperature from the machine profile
+
+GenericRecord p;
+GenericRecord e;
+
+Tuple3<String,Short,Short> newEvent =
+        Tuple3.tuple3(e.getString("serialNum"), e.getShort("bitTemp"), p.getShort("warningTemp"));
+
+// now, if we want to access fields from the 3-tuple, we use f0(), f1() and f2()
+short bitTemp = newEvent.f1();
+```
+
+== Step 4: Deploy Your First Job
+
+. In your IDE, navigate to the `monitoring-pipeline` project.  Open up  the `hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline` class and review the code there.
++
+The main method, shown below, is boilerplate that helps with deploying the job to a cluster. You do not need to change this.
++
+```java
+
+    public static void main(String []args){
+        Pipeline pipeline = createPipeline();
+        pipeline.setPreserveOrder(true);
+
+        JobConfig jobConfig = new JobConfig();
+        jobConfig.setName("Temperature Monitor");
+        HazelcastInstance hz = Hazelcast.bootstrappedInstance();
+        hz.getJet().newJob(pipeline, jobConfig);
+    }
+```
++
+You will do all of your work in the `createPipeline` method of this job. It always starts with creating a pipeline object.  You then build up the pipeline by adding stages to it.
++
+```java
+   public static Pipeline createPipeline(){
+        Pipeline pipeline = Pipeline.create();
+        // add your stages here
+        return pipeline;
+   }
+```
++
+[NOTE]
+====
+* We use the shade plugin to bundle all project dependencies , _other than Hazelcast_, into a single jar. The Hazelcast classes should not be included because they are already on the server.
+* Code with `com.hazelcast` package names cannot be deployed to a Hazelcast Viridian cluster.
+====
++
+Currently, the `createPipeline` method contains only a source (reading from the `machine_events` map) and a sink, which simply logs the events to the console.  This can be useful during debugging. In the next step, you'll make a small change to the pipeline and walk through a typical code/test cycle.
+
+. Make a small change to the output format in the `writeTo` statement just so we can walk through building and deploying a pipeline.  After you've made the change, you can deploy the pipeline using the commands below.
++
+```shell
+cd monitoring-pipeline
+mvn package
+cd ..
+
+```
+
+
+
+== Summary
+
+////
+Summarise what knowledge the reader has gained by completing the tutorial, including a summary of each step's goals (this is a good way to validate whether your tutorial has covered all you need it to.)
+////
+
+
+== See Also
+
+// Optionally, add some links to resources, such as other related guides.
