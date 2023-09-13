@@ -1,7 +1,7 @@
 services:
 
   hz:
-    image: hazelcast/hazelcast:5.2.1
+    image: hazelcast/hazelcast:5.3.1
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
       CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
@@ -11,7 +11,7 @@ services:
       - hznet
 
   mc:
-    image: hazelcast/management-center:5.2.1
+    image: hazelcast/management-center:5.3.1
     environment:
       MC_DEFAULT_CLUSTER: dev
       MC_DEFAULT_CLUSTER_MEMBERS: hz:5701
@@ -21,7 +21,7 @@ services:
       - hznet
 
   submit-aggregation-job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.1
     volumes:
       - ".:/project"
     command: >
@@ -35,7 +35,7 @@ services:
     - hznet
 
   submit-summary-service-job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.1
     volumes:
       - ".:/project"
     command: >
@@ -51,7 +51,7 @@ services:
       - hznet
 
   submit-summary-service-job-2:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.1
     volumes:
       - ".:/project"
     command: >
@@ -124,8 +124,8 @@ services:
 
   performance-test:
     build:
-      context: performance-test
-    command: -f /project/performance-test/perftest.py
+      context: ./performance-test
+    entrypoint: /project/performance-test/perftest.sh
     environment:
       HZ_SERVERS: hz
       HZ_CLUSTER_NAME: dev
