@@ -10,13 +10,17 @@ import com.hazelcast.map.listener.EntryUpdatedListener;
 import hazelcast.platform.labs.MapWaiter;
 import hazelcast.platform.labs.machineshop.domain.MachineProfile;
 import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
-import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.labs.machineshop.domain.Names;
 import hazelcast.platform.labs.viridian.ViridianConnection;
+import org.apache.kafka.clients.admin.*;
+import org.apache.kafka.clients.producer.KafkaProducer;
 
+import java.util.Collections;
+import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -29,10 +33,18 @@ import java.util.concurrent.TimeUnit;
  * HZ_CLUSTER_NAME  The name of the Hazelcast cluster to connect.  Required.
  * <p>
  * MACHINE_COUNT The number of machines to emulate.
+ * <p>
+ * KAFKA_BOOTSTRAP_SERVERS   Provides the bootstrap.servers value to the KafkaProducer api
+ * <p>
+ * KAFKA_TOPIC               The name of the topic to which events will be published
  */
+
+//TODO Add Support for additional Kafka connection properties
 public class EventGenerator {
     public static final String HZ_SERVERS_PROP = "HZ_SERVERS";
     public static final String HZ_CLUSTER_NAME_PROP = "HZ_CLUSTER_NAME";
+    public static final String KAFKA_BOOTSTRAP_SERVERS_PROP = "KAFKA_BOOTSTRAP_SERVERS";
+    public static final String KAFKA_TOPIC_PROP = "KAFKA_TOPIC";
 
     public static final String MACHINE_COUNT_PROP = "MACHINE_COUNT";
 
@@ -40,12 +52,13 @@ public class EventGenerator {
     private static String hzClusterName;
 
     private static int machineCount;
+    private static String kafkaBootstrapServers;
+    private static String kafkaTopic;
 
     private static Set<String> serialNums;
 
     private static  HazelcastInstance hzClient;
     private static IMap<String, MachineProfile> machineProfileMap;
-    private static IMap<String, MachineStatusEvent> machineEventMap;
 
     private static IMap<String, String> systemActivitiesMap;
     private static final ConcurrentHashMap<String, MachineEmulator> machineEmulatorMap = new ConcurrentHashMap<>();
@@ -88,6 +101,9 @@ public class EventGenerator {
             System.err.println("Machine count must be between 1 and 1,000,000 inclusive");
             System.exit(1);
         }
+
+        kafkaBootstrapServers = getRequiredProp(KAFKA_BOOTSTRAP_SERVERS_PROP);
+        kafkaTopic = getRequiredProp(KAFKA_TOPIC_PROP);
     }
 
 
@@ -107,7 +123,6 @@ public class EventGenerator {
 
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
         machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
-        machineEventMap = hzClient.getMap(Names.EVENT_MAP_NAME);
         systemActivitiesMap = hzClient.getMap(Names.SYSTEM_ACTIVITIES_MAP_NAME);
 
         IMap<String, String> machineControlMap = hzClient.getMap(Names.CONTROLS_MAP_NAME);
@@ -137,6 +152,33 @@ public class EventGenerator {
             System.exit(1);
         }
     }
+
+    private static KafkaProducer<String, String> connectToKafka(){
+        int PARTITIONS = 23;
+        Properties adminClientProps = new Properties();
+        adminClientProps.setProperty(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaBootstrapServers);
+        try(Admin admin = Admin.create(adminClientProps)){
+            ListTopicsResult r = admin.listTopics();
+            if (! r.names().get().contains(kafkaTopic)){
+                CreateTopicsResult result =
+                        admin.createTopics(Collections.singleton(new NewTopic(kafkaTopic, PARTITIONS, (short) 1)));
+                result.all().get();
+                System.out.println("Created Topic: " + kafkaTopic);
+            } else {
+                System.out.println("Topic exists: " + kafkaTopic);
+            }
+        } catch (ExecutionException | InterruptedException ee) {
+            ee.printStackTrace();
+            System.exit(1);
+        }
+
+        Properties props = new Properties();
+        props.setProperty("bootstrap.servers", kafkaBootstrapServers);
+        props.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        return new KafkaProducer<>(props);
+    }
+
     public static void main(String[] args) {
         configure();
         connectToHazelcast();
@@ -149,6 +191,9 @@ public class EventGenerator {
 
         ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(16);
         Runtime.getRuntime().addShutdownHook(new Thread(executor::shutdown));
+
+        KafkaProducer<String, String> producer = connectToKafka();
+        Runtime.getRuntime().addShutdownHook(new Thread(producer::close));
 
         for (String sn: serialNums) {
             MachineProfile profile = machineProfileMap.get(sn);
@@ -166,7 +211,7 @@ public class EventGenerator {
                 signalGen = normalSignalGenerator(.7f * profile.getWarningTemp());
             }
 
-            MachineEmulator emulator = new MachineEmulator(machineEventMap, sn, signalGen);
+            MachineEmulator emulator = new MachineEmulator(producer, kafkaTopic, sn, signalGen);
             machineEmulatorMap.put(emulator.getSerialNum(), emulator);
             executor.scheduleAtFixedRate(emulator, rand.nextInt(1000), 1000, TimeUnit.MILLISECONDS);
         }

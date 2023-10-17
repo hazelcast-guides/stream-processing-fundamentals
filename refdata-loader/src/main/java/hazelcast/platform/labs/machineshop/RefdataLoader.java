@@ -66,8 +66,7 @@ public class RefdataLoader {
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
-            "'valueFormat' = 'compact'," +
-            "'valueCompactTypeName' = 'hazelcast.platform.labs.machineshop.domain.MachineStatusEvent')";
+            "'valueFormat' = 'json-flat')";
 
     // TODO value format should be portable, why does this work ?
     private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +

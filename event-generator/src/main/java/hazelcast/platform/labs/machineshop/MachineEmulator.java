@@ -1,26 +1,32 @@
 package hazelcast.platform.labs.machineshop;
 
-import com.hazelcast.map.IMap;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
+import org.apache.kafka.clients.producer.Callback;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 
-public class MachineEmulator implements  Runnable{
+public class MachineEmulator implements  Runnable, Callback {
     private final String serialNum;
 
-    private  SignalGenerator tempSignalGenerator;
-    private String targetURL;
-
-    private final IMap<String, MachineStatusEvent> machineStatusMap;
-
+    private final KafkaProducer<String, String> kafkaProducer;
+    private final String kafkaTopic;
     private int t;
     private SignalGenerator signalGenerator;
 
     private MachineStatusEvent currStatus;
 
-    public MachineEmulator(IMap<String,MachineStatusEvent> machineStatusMap, String sn, SignalGenerator signalGenerator){
-        this.machineStatusMap = machineStatusMap;
+    private final ObjectMapper mapper;
+
+    public MachineEmulator(KafkaProducer<String,String> producer, String topic, String sn, SignalGenerator signalGenerator){
+        this.kafkaProducer = producer;
+        this.kafkaTopic = topic;
         this.signalGenerator = signalGenerator;
         this.serialNum = sn;
         this.t = 0;
+        this.mapper = new ObjectMapper();
     }
 
     public  synchronized void setSignalGenerator(SignalGenerator signalGenerator){
@@ -38,9 +44,12 @@ public class MachineEmulator implements  Runnable{
         currStatus.setBitPositionY(0);
         currStatus.setBitPositionZ(0);
 
-        machineStatusMap.putAsync(serialNum, currStatus).whenComplete((v,x) -> {
-            if (x != null) System.out.println("WARNING: put failed");
-        });
+        try {
+            String payload = mapper.writeValueAsString(currStatus);
+            kafkaProducer.send(new ProducerRecord<>(kafkaTopic, serialNum, payload), this);
+        } catch(JsonProcessingException jpx){
+            System.out.println("WARNING: could not convert event to json: " + jpx.getMessage());
+        }
     }
 
     public MachineStatusEvent getCurrStatus(){
@@ -48,4 +57,12 @@ public class MachineEmulator implements  Runnable{
     }
 
     public String getSerialNum() { return serialNum;}
+
+    @Override
+    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+        if (e != null) {
+            System.out.println("ERROR: send failed.");
+            e.printStackTrace(System.out);
+        }
+    }
 }
