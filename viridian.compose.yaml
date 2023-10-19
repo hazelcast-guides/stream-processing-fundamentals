@@ -1,7 +1,7 @@
 services:
 
   submit_job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.2
     env_file:
       - viridian.env
     environment:
@@ -17,7 +17,7 @@ services:
       - disabled
 
   cancel_job:
-    image: hazelcast/hazelcast-enterprise:5.2.1
+    image: hazelcast/hazelcast-enterprise:5.3.2
     env_file:
       - viridian.env
     environment:
