@@ -3,6 +3,7 @@ Make sure to rename this file to the name of your repository and add the filenam
 ////
 
 // Describe the title of your article by replacing 'Tutorial template' with the page name you want to publish.
+
 = Pipeline API Tutorial - The Machine Shop
 // Add required variables
 :page-layout: tutorial
@@ -11,6 +12,7 @@ Make sure to rename this file to the name of your repository and add the filenam
 :page-lang: sql 
 :page-enterprise: 
 :page-est-time: 30 mins 
+
 :description: Build a Hazelcast Pipeline for monitoring and reacting to telemetry from a machine shop.
 
 We will be building a Hazelcast Pipeline for monitoring and reacting to telemetry from a machine shop.
