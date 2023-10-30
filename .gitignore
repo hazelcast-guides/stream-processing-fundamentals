@@ -10,3 +10,6 @@ venv/
 hzcloud_*_keys/
 job/
 diagnostics/
+node_modules/
+local-docs/
+package-lock.json
