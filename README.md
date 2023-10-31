@@ -1,1 +1,1 @@
-This repository hosts the documentation and code samples for the link: https://docs.hazelcast.com/tutorials/stream-processing-fundamentals.html[Pipeline API Tutorial - The Machine Shop tutorial]
+This repository hosts the documentation and code samples for the link: [Pipeline API Tutorial - The Machine Shop tutorial](https://docs.hazelcast.com/tutorials/stream-processing-fundamentals)
