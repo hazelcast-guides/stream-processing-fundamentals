@@ -24,6 +24,13 @@ via the `machine_controls` IMap.  A schematic of the lab is shown below.
 
 image:pipeline.png[schematic]
 
+== Before You Begin
+You will need the following installed on your system:
+* JDK 17 or later
+* Maven 3.8 or later
+* Your preferred Java IDE (We recommend IntelliJ IDEA)
+* Hazelcast Command Line Client
+
 == Step 1: Validate the Lab Environment
 .  Run the following commands to start your lab environment.
 +
