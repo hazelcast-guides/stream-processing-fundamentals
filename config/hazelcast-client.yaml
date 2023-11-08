@@ -1,6 +1,6 @@
 hazelcast-client:
   cluster-name: dev
-  instance-name: override_me
+  instance-name: http-bridge
   network:
     cluster-members:
       - hz:5701
@@ -8,7 +8,3 @@ hazelcast-client:
   connection-strategy:
     async-start: false
     reconnect-mode: ON
-  serialization:
-    portable-factories:
-      - factory-id: 1
-        class-name: hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory
