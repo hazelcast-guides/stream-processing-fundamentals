@@ -1,35 +1,5 @@
 services:
 
-  submit_job:
-    image: hazelcast/hazelcast-enterprise:5.3.2
-    env_file:
-      - viridian.env
-    environment:
-      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
-      MACHINE_COUNT: 1000
-      SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
-    volumes:
-      - ".:/project"
-    command: /project/cli/viridian_submitjob.sh
-    networks:
-    - hznet
-    profiles:
-      - disabled
-
-  cancel_job:
-    image: hazelcast/hazelcast-enterprise:5.3.2
-    env_file:
-      - viridian.env
-    environment:
-      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
-    volumes:
-      - ".:/project"
-    command: /project/cli/viridian_canceljob.sh
-    networks:
-      - hznet
-    profiles:
-      - disabled
-
   refdata_loader:
     image: openjdk:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar

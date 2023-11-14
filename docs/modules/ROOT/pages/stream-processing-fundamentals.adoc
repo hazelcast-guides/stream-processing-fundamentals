@@ -26,10 +26,11 @@ image:pipeline.png[schematic]
 
 == Before You Begin
 You will need the following installed on your system:
-* JDK 17 or later
-* Maven 3.8 or later
-* Your preferred Java IDE (We recommend IntelliJ IDEA)
-* Hazelcast Command Line Client
+
+* https://www.oracle.com/java/technologies/downloads/[JDK 17 or later]
+* https://maven.apache.org/download.cgi[Maven 3.8 or later]
+* Your preferred Java IDE (We recommend https://www.jetbrains.com/idea/download/?source=google&medium=cpc&campaign=AMER_en_US-PST+MST_IDEA_Branded&term=intellij+idea&content=602143185985&gad=1&gclid=Cj0KCQiAr8eqBhD3ARIsAIe-buM14qxoPph8ClqF1e4IL-xsv9LLe9w35ts2Q7Pt1uoS6vqc-8K-Cm0aAv1oEALw_wcB&section=mac[IntelliJ IDEA])
+* https://docs.hazelcast.com/clc/5.3.5/install-clc[Hazelcast Command Line Client]
 
 == Step 1: Validate the Lab Environment
 .  Run the following commands to start your lab environment.
@@ -40,7 +41,7 @@ docker compose up -d
 docker compose ps
 ```
 +
-You should see  5 services up and running.  You may also see a 6th service called `refdata_loader` which exits after 
+You should see  4 services up and running.  You may also see a 5th service called `refdata_loader` which exits after 
 it has loaded data into the `machine_profiles` map. 
 +
 Each service is described briefly below.
@@ -58,9 +59,6 @@ Each service is described briefly below.
 
 | event_generator 
 | Emulates traffic from a set of machines. Writes to `machine_events`. Listens to `machine_controls`. 
-
-| cli
-| Runs the Hazelcast CLI.  Used for deploying jobs. 
 
 | ui
 | A Python program that listens to the `machine_events` map and displays temperature data graphically. Accessible at http://localhost:8050 
@@ -84,20 +82,32 @@ image:MC_SQL.png[MC]
 . Run `select * from machine_profiles` in the SQL Browser.
 +
 You will see that for each machine there is a serial number, information about the location and the warning and critical temperature limits for that particular machine.
-
++
 image:profiles.png[profiles]
 
 . Run `select * from machine_events`
-
++
 image:machine_events.png[events]
-
++
 This is the actual data coming from the machines.  
-
++
 [NOTE]
 At any given time, only the latest event for each serial number 
 appears in the map, however, the update events are all recorded into something called a `map journal` that can be used as input to a pipeline.  You can verify that the map is constantly being updated by navigating to the `machine_events` map in Management Center and observing the number of put operations.
-
++
 image:puts_and_entries.png[Puts]
+
+. In a terminal window, set up the Command Line Client to connect to the Hazelcast instance in Docker, then open a CLC connection.
++
+```shell
+clc config add Docker cluster.name=dev cluster.address=localhost:5701
+clc -c Docker
+```
+
+. Run the same SQL queries as above.
+
+[NOTE]
+From this point forward, you can use either Management Center or CLC to run SQL queries and monitor jobs. Management Center will also display the DAG created for submitted jobs.
 
 == Step 3: Learn About Data Formats
 
@@ -179,8 +189,8 @@ Currently, the `createPipeline` method contains only a source (reading from the 
 ```shell
 cd monitoring-pipeline
 mvn package
-cd ..
-docker compose run submit_job
+cd ..\clc-scripts
+sh submitjob.sh
 # look for the logging statements in the Hazelcast logs
 docker compose logs --follow hz
 Ctrl-C
@@ -194,7 +204,7 @@ stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,591 [ INFO] [hz.hungr
 stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,640 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=DYQ714
 ```
 
-. Inspect the running job using Management Center. 
+. Inspect the running job using Management Center or CLC
 
 . Cancel the job. The Hazelcast cluster will remain up and events will continue to flow. 
 
@@ -222,22 +232,26 @@ NOTE: If at any point you get stuck, you can refer to the solution which you wil
 
 In this step, you will deploy your temperature monitoring Pipeline to a Viridian cluster and connect the UI, refdata loader and event_generator to it as well.
 
-. If you haven't already done so, navigate to https://viridian.hazelcast.com, create an account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  After the cluster is deployed, close the "Quick Connection Guide" as shown below.
-+
-image:close_connect.png[close_connect]
+. If you haven't already done so, navigate to https://viridian.hazelcast.com, create an account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  
 
-. Next we will obtain all of the keys and configuration parameters required to make a connection to Viridian. In the Viridian console, click on "Connect Cluster" next to your cluster, then select "Advanced Setup" and download the keystore file for your cluster as shown below.  Unzip the downloaded file and place it directly inside of the "stream-processing-fundamentals" directory.  You will also need the discovery token, truststore password and cluster id that are displayed on that screen. 
+. After the cluster is deployed, go to the CLI section of the "Quick Connection Guide" as shown below. Follow steps 2 and 3 to set up CLC for your Viridian cluster. 
 +
-image:connect.png[connect]
-+
-image:advanced_setup.png[advanced]
+image:viridian-clc-config.png[viridian-clc-config]
 
-. Edit "viridian.env" and provide the path to the key files, the discovery token, the cluster id and the keystore password.
-Once you have done this, you are ready to start the refdata_loader, event_generator and ui pointed to your Viridian cluster. 
+. Edit `viridian.env` and provide the following information:
+
+* Path: `$HOME/.hazelcast/configs/<your-cluster-name>`
+* Discovery token: copy `discovery-token` from `$HOME/.hazelcast/configs/<your-cluster-name>/config.yaml`
+* Cluster ID: copy `name` from `$HOME/.hazelcast/configs/<your-cluster-name>/config.yaml`
+* Keystore password: copy `keystore-password` from `$HOME/.hazelcast/configs/<your-cluster-name>/config.yaml`
++
+
+. Start the refdata_loader, event_generator and ui using the viridian.compose setup. This pulls the environment variables you just set and allows the local Docker instances to talk to your Viridian cluster. 
 +
 ```shell
 docker compose -f viridian.compose.yaml up -d`
 ```
+
 . View the logs.
 +
 ```shell

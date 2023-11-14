@@ -22,26 +22,6 @@ services:
     networks:
       - hznet
 
-  submit_job:
-    image: hazelcast/hazelcast:latest
-    volumes:
-      - ".:/project"
-    command: /project/cli/submitjob.sh
-    networks:
-    - hznet
-    profiles:
-      - disabled
-
-  cancel_job:
-    image: hazelcast/hazelcast:latest
-    volumes:
-      - ".:/project"
-    command: /project/cli/canceljob.sh
-    networks:
-      - hznet
-    profiles:
-      - disabled
-
   refdata_loader:
     image: openjdk:11
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
