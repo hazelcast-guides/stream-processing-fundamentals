@@ -1,7 +1,7 @@
 services:
 
   hz:
-    image: hazelcast/hazelcast:latest
+    image: hazelcast/hazelcast:5.3
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
       CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
@@ -13,7 +13,7 @@ services:
       - "5701:5701"
 
   mc:
-    image: hazelcast/management-center:latest
+    image: hazelcast/management-center:5.3
     environment:
       MC_DEFAULT_CLUSTER: dev
       MC_DEFAULT_CLUSTER_MEMBERS: hz
