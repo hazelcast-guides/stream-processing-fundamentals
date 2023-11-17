@@ -31,6 +31,7 @@ You will need the following installed on your system:
 * https://maven.apache.org/download.cgi[Maven 3.8 or later]
 * Your preferred Java IDE (We recommend https://www.jetbrains.com/idea/download/?source=google&medium=cpc&campaign=AMER_en_US-PST+MST_IDEA_Branded&term=intellij+idea&content=602143185985&gad=1&gclid=Cj0KCQiAr8eqBhD3ARIsAIe-buM14qxoPph8ClqF1e4IL-xsv9LLe9w35ts2Q7Pt1uoS6vqc-8K-Cm0aAv1oEALw_wcB&section=mac[IntelliJ IDEA])
 * https://docs.hazelcast.com/clc/5.3.5/install-clc[Hazelcast Command Line Client]
+* https://www.docker.com/products/docker-desktop/[Docker Desktop]
 
 == Step 1: Validate the Lab Environment
 .  Run the following commands to start your lab environment.
@@ -117,17 +118,19 @@ It is a best practice to avoid using POJOs in Pipelines if that POJO will be sto
 class loading problems.  
 
 [NOTE] 
-When using _Compact_ or _Portable_ serialization, Hazelcast automatically translates POJOs 
-into _GenericRecord_ when accessed on the server side. 
+When using _Compact_ or _Portable_ serialization, if a POJO is accessed in server-side 
+code, it will be be deserialized as a _GenericRecord_ if the POJO class is not 
+on the server's class path. Accordingly, server side code must be written to handle either
+a _GenericRecord_ or a POJO depending on whether the POJO class is present.
 
-In this lab, you will be working with _MachineProfile_ objects and _MachineEvents_, both of which are defined in `common/src/main/java`.  However, those classes are not deployed with your job.  Intead , you will need to access them using GenericRecord.  An example of GenericRecord usage is shown below.
+In this lab, you will be working with _MachineProfile_ objects and _MachineEvents_, both of which are defined in `common/src/main/java`.  However, those classes are not deployed with your job, so you will need to access them using GenericRecord.  An example of GenericRecord usage is shown below.
 
 ```java
 GenericRecord machineEvent;
 short bitTemperature = machineEvent.getInt16("bitTemp");
 ```
 For more information on GenericRecord and accessing domain objects without domain classes see
-https://docs.hazelcast.com/hazelcast/5.2/clusters/accessing-domain-objects.
+https://docs.hazelcast.com/hazelcast/5.3/clusters/accessing-domain-objects.
 
 === Tuples
 
