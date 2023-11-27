@@ -237,22 +237,34 @@ In this step, you will deploy your temperature monitoring Pipeline to a Viridian
 
 . If you haven't already done so, navigate to https://viridian.hazelcast.com, create an account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  
 
-. After the cluster is deployed, go to the CLI section of the "Quick Connection Guide" as shown below. Follow steps 2 and 3 to set up CLC for your Viridian cluster. 
+. After the cluster is deployed, go to the CLI section of the "Quick Connection Guide" as shown below. Follow steps 2  and 3 to set up CLC for your Viridian cluster. 
 +
 image:viridian-clc-config.png[viridian-clc-config]
 
-. Edit `viridian.env` and provide the following information:
-
-* Path: `$HOME/.hazelcast/configs/<your-cluster-name>`
-* Discovery token: copy `discovery-token` from `$HOME/.hazelcast/configs/<your-cluster-name>/config.yaml`
-* Cluster ID: copy `name` from `$HOME/.hazelcast/configs/<your-cluster-name>/config.yaml`
-* Keystore password: copy `keystore-password` from `$HOME/.hazelcast/configs/<your-cluster-name>/config.yaml`
+. The previous step should have given output similar to the following:
 +
+```
+rmay@HZLCST-MBP-42 stream-processing-fundamentals % clc -c pr-tgouvd9r
+Hazelcast CLC v5.3.5 (c) 2023 Hazelcast Inc.
 
+* Participate in our survey at: https://forms.gle/rPFywdQjvib1QCe49
+* Type 'help' for help information. Prefix non-SQL commands with \
+
+Configuration : /Users/me/.hazelcast/configs/pr-tgouvd9r/config.yaml
+Log      INFO : /Users/me/.hazelcast/logs/2023-11-27.log
+```
+We will need to tell Docker where to find the configuration files for your cluster.  In the above output, the configuration files for this cluster are all in the `/Users/me/.hazelcast/configs/pr-tgouvd9r` directory.
++
+In the shell or Windows command line where you will run your Docker commands, set the `VIRIDIAN_SECRETS_DIR` environment variable to the configuration directory.  For example:
++
+```
+export VIRIDIAN_SECRETS_DIR=/Users/me/.hazelcast/configs/pr-tgouvd9r
+```
++
 . Start the refdata_loader, event_generator and ui using the viridian.compose setup. This pulls the environment variables you just set and allows the local Docker instances to talk to your Viridian cluster. 
 +
 ```shell
-docker compose -f viridian.compose.yaml up -d`
+docker compose -f viridian.compose.yaml up -d
 ```
 
 . View the logs.

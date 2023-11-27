@@ -14,5 +14,4 @@ node_modules/
 local-docs/
 package-lock.json
 cli/
-viridian.env
 .vscode/
