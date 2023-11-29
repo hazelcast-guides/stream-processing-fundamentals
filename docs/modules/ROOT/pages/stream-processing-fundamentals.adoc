@@ -290,7 +290,28 @@ clc-scripts % clc config list
 
 ./clc-scripts/sumbit-job.sh pr-tgouvd9r
 ```
-. Verify that the job is running using Management Center via the Viridian console.
+. Verify that the job is running using Management Center via the Viridian console. Look under _Stream Processing > Jobs_.
+
+. We'll use CLC to view the logs from the Viridian cluster. First, you'll need to set up the API key and secret strings. In the Viridian console, go to _Account > Developer_ and set the API key. Do not navigate away from this screen.
+
+. In your terminal window, open the CLC command line, specifying the name of your cluster. An example of the command is below.
++
+```shell
+clc -c pr-tgouvd9r
+```
+
+. At the CLC prompt, log in to your cluster. Enter the API key and secret when prompted.
++
+```shell
+\viridian login
+```
+
+. At the CLC prompt, view the logs for your cluster. You will need to specify the name of your cluster. An example is shown below. The output will be similar to the output you saw at the end of Step 4 above.
++
+```shell
+\viridian stream-logs EdSrvs
+```
+
 
 == Congratulations!
 
