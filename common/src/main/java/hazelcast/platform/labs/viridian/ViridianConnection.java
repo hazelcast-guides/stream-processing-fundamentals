@@ -2,8 +2,12 @@ package hazelcast.platform.labs.viridian;
 
 import com.hazelcast.client.config.ClientConfig;
 import com.hazelcast.config.SSLConfig;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Map;
 import java.util.Properties;
 
 public class ViridianConnection {
@@ -27,11 +31,50 @@ public class ViridianConnection {
         String secretsDir = System.getenv(VIRIDIAN_SECRETS_DIR_PROP);
         return secretsDir != null;
     }
+
     public static void configureFromEnvironment(ClientConfig clientConfig){
         String secretsDir = getRequiredEnv(VIRIDIAN_SECRETS_DIR_PROP);
-        String password = getRequiredEnv(VIRIDIAN_PASSWORD_PROP);
-        String clusterId = getRequiredEnv(VIRIDIAN_CLUSTER_ID_PROP);
-        String discoveryToken = getRequiredEnv(VIRIDIAN_DISCOVERY_TOKEN_PROP);
+        String password;
+        String discoveryToken;
+        String clusterId;
+
+        File configFile = new File(secretsDir,"config.yaml");
+        if (configFile.isFile()){
+            Yaml parser = new Yaml();
+            try(FileInputStream fis = new FileInputStream(configFile)){
+                Map<String, Object> config = parser.load(fis);
+                Map<String, Object> clusterConfig = (Map<String, Object>) config.get("cluster");
+                if (clusterConfig == null){
+                    throw new RuntimeException("Configuration file at \"" + configFile.getAbsolutePath() +
+                            "\"does not have the expected format");
+                }
+                clusterId = (String) clusterConfig.get("name");
+                discoveryToken = (String) clusterConfig.get("discovery-token");
+                if (clusterId == null || discoveryToken == null){
+                    throw new RuntimeException("Configuration file at \"" + configFile.getAbsolutePath() +
+                            "\"does not have the expected format");
+                }
+
+                Map<String, Object> sslConfig = (Map<String, Object>) config.get("ssl");
+                if (sslConfig == null){
+                    throw new RuntimeException("Configuration file at \"" + configFile.getAbsolutePath() +
+                            "\"does not have the expected format");
+                }
+
+                password = (String) sslConfig.get("key-password");
+                if (password == null){
+                    throw new RuntimeException("Configuration file at \"" + configFile.getAbsolutePath() +
+                            "\"does not have the expected format");
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("An error occurred while parsing \"" + configFile.getAbsolutePath() + "\"",e);
+            }
+        } else {
+            password = getRequiredEnv(VIRIDIAN_PASSWORD_PROP);
+            clusterId = getRequiredEnv(VIRIDIAN_CLUSTER_ID_PROP);
+            discoveryToken = getRequiredEnv(VIRIDIAN_DISCOVERY_TOKEN_PROP);
+        }
+
         configure(clusterId, discoveryToken, password, secretsDir, clientConfig);
     }
 

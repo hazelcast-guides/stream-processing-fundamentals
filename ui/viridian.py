@@ -1,7 +1,9 @@
 import os
+import os.path
 
 import hazelcast
 import hazelcast.discovery
+import yaml
 
 # These environment variables are required
 VIRIDIAN_SECRETS_DIR_PROP = "VIRIDIAN_SECRETS_DIR"
@@ -16,10 +18,18 @@ def viridian_config_present() -> bool:
 
 # kwargs will be passed to the HazelcastClient
 def configure_from_environment(**addl_hz_client_args):
-    cluster_id = os.environ[VIRIDIAN_CLUSTER_ID_PROP]
-    discovery_token = os.environ[VIRIDIAN_DISCOVERY_TOKEN_PROP]
-    password = os.environ[VIRIDIAN_PASSWORD_PROP]
     secrets_dir = os.environ[VIRIDIAN_SECRETS_DIR_PROP]
+    if os.path.exists(os.path.join(secrets_dir, 'config.yaml')):
+        with open(os.path.join(secrets_dir, 'config.yaml'), 'r') as f:
+            config = yaml.safe_load(f)
+            cluster_id = config["cluster"]["name"]
+            discovery_token = config["cluster"]["discovery-token"]
+            password = config["ssl"]["key-password"]
+    else:
+        cluster_id = os.environ[VIRIDIAN_CLUSTER_ID_PROP]
+        discovery_token = os.environ[VIRIDIAN_DISCOVERY_TOKEN_PROP]
+        password = os.environ[VIRIDIAN_PASSWORD_PROP]
+
     return configure(cluster_id=cluster_id,
                      discovery_token=discovery_token,
                      password=password,
