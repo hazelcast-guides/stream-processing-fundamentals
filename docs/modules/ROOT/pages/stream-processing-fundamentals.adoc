@@ -192,8 +192,8 @@ Currently, the `createPipeline` method contains only a source (reading from the 
 ```shell
 cd monitoring-pipeline
 mvn package
-cd ..\clc-scripts
-sh submitjob.sh
+cd ..
+./clc-scripts/submitjob.sh
 # look for the logging statements in the Hazelcast logs
 docker compose logs --follow hz
 Ctrl-C
@@ -253,9 +253,9 @@ Hazelcast CLC v5.3.5 (c) 2023 Hazelcast Inc.
 Configuration : /Users/me/.hazelcast/configs/pr-tgouvd9r/config.yaml
 Log      INFO : /Users/me/.hazelcast/logs/2023-11-27.log
 ```
-We will need to tell Docker where to find the configuration files for your cluster.  In the above output, the configuration files for this cluster are all in the `/Users/me/.hazelcast/configs/pr-tgouvd9r` directory.
+We will need to tell Docker where to find the configuration files for your cluster.  In the above output, the configuration files for this cluster are  in the `/Users/me/.hazelcast/configs/pr-tgouvd9r` directory.
 +
-In the shell or Windows command line where you will run your Docker commands, set the `VIRIDIAN_SECRETS_DIR` environment variable to the configuration directory.  For example:
+In the shell or Windows command line where you will run your Docker commands, set the `VIRIDIAN_SECRETS_DIR` environment variable to the configuration directory.  See below for an example.  Be sure to change "me" to your username.
 +
 ```
 export VIRIDIAN_SECRETS_DIR=/Users/me/.hazelcast/configs/pr-tgouvd9r
@@ -275,10 +275,16 @@ docker compose -f viridian.compose.yaml logs --follow
 
 . Use Management Center via the Viridian console to verify that your cluster is receiving traffic.  
 
-. Submit your job. 
+. Submit your job using the same script as before.  This time you will need to pass in the name of your cluster.  Use `clc config list` to see a list of known clusters.  An example is shown below.
 +
 ```shell
-docker compose -f viridian.compose.yaml run submit_job`. 
+clc-scripts % clc config list
+ Configuration Name
+ Docker
+ dea-test
+ pr-tgouvd9r  << Suppose you want to use this one
+
+./clc-scripts/sumbit-job.sh pr-tgouvd9r
 ```
 . Verify that the job is running using Management Center via the Viridian console.
 
