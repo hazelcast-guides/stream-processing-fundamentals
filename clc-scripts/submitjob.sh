@@ -1,4 +1,4 @@
-#!/bin/bash
+!/bin/bash
 set -e
 SCRIPTDIR=`dirname $0`
 CLUSTER_NAME=Docker
@@ -9,11 +9,11 @@ fi
 
 JOBNAME=temp_monitor_`date +%H%M%S`
 echo $JOBNAME > $SCRIPTDIR/../job/${CLUSTER_NAME}_job.txt
-clc -c $CLUSTER_NAME job submit \
+ clc -c $CLUSTER_NAME job submit \
     --verbose \
     --class=hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline \
     --name=$JOBNAME \
-    ../monitoring-pipeline/target/monitoring-pipeline-1.0-SNAPSHOT.jar
+    $SCRIPTDIR/../monitoring-pipeline/target/monitoring-pipeline-1.0-SNAPSHOT.jar
 
 # Submit the solution instead
 #  clc -c $CLUSTER_NAME job submit \

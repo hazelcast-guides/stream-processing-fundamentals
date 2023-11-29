@@ -193,13 +193,14 @@ Currently, the `createPipeline` method contains only a source (reading from the 
 cd monitoring-pipeline
 mvn package
 cd ..
-./clc-scripts/submitjob.sh
+# use the submission script, passing the name of the cluster you want to run the job
+./clc-scripts/submitjob.sh Docker
 # look for the logging statements in the Hazelcast logs
 docker compose logs --follow hz
 Ctrl-C
 ```
 +
-You should see something like this:
+You should see something like this in the Hazelcast cluster member log:
 ```shell
 stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,357 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=HYV569
 stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,370 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=FXQ058
@@ -210,7 +211,10 @@ stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,640 [ INFO] [hz.hungr
 . Inspect the running job using Management Center or CLC
 
 . Cancel the job. The Hazelcast cluster will remain up and events will continue to flow. 
-
+```shell
+./clc-scripts/canceljob.sh Docker
+```
++
 image:firstjob.png[first job]
 
 . Pat yourself on the back! You've deployed your first pipeline.
@@ -253,12 +257,12 @@ Hazelcast CLC v5.3.5 (c) 2023 Hazelcast Inc.
 Configuration : /Users/me/.hazelcast/configs/pr-tgouvd9r/config.yaml
 Log      INFO : /Users/me/.hazelcast/logs/2023-11-27.log
 ```
-We will need to tell Docker where to find the configuration files for your cluster.  In the above output, the configuration files for this cluster are  in the `/Users/me/.hazelcast/configs/pr-tgouvd9r` directory.
+We will need to tell Docker where to find the configuration files for your cluster.  In the above output, the configuration files for this cluster are  in the `$HOME/.hazelcast/configs/pr-tgouvd9r` directory.
 +
-In the shell or Windows command line where you will run your Docker commands, set the `VIRIDIAN_SECRETS_DIR` environment variable to the configuration directory.  See below for an example.  Be sure to change "me" to your username.
+In the shell or Windows command line where you will run your Docker commands, set the `VIRIDIAN_SECRETS_DIR` environment variable to the configuration directory.  See below for an example.  Be sure to use your Viridian cluster name.
 +
 ```
-export VIRIDIAN_SECRETS_DIR=/Users/me/.hazelcast/configs/pr-tgouvd9r
+export VIRIDIAN_SECRETS_DIR=$HOME/.hazelcast/configs/pr-tgouvd9r
 ```
 +
 . Start the refdata_loader, event_generator and ui using the viridian.compose setup. This pulls the environment variables you just set and allows the local Docker instances to talk to your Viridian cluster. 
@@ -286,7 +290,28 @@ clc-scripts % clc config list
 
 ./clc-scripts/sumbit-job.sh pr-tgouvd9r
 ```
-. Verify that the job is running using Management Center via the Viridian console.
+. Verify that the job is running using Management Center via the Viridian console. Look under _Stream Processing > Jobs_.
+
+. We'll use CLC to view the logs from the Viridian cluster. First, you'll need to set up the API key and secret strings. In the Viridian console, go to _Account > Developer_ and set the API key. Do not navigate away from this screen.
+
+. In your terminal window, open the CLC command line, specifying the name of your cluster. An example of the command is below.
++
+```shell
+clc -c pr-tgouvd9r
+```
+
+. At the CLC prompt, log in to your cluster. Enter the API key and secret when prompted.
++
+```shell
+\viridian login
+```
+
+. At the CLC prompt, view the logs for your cluster. You will need to specify the name of your cluster. An example is shown below. The output will be similar to the output you saw at the end of Step 4 above.
++
+```shell
+\viridian stream-logs EdSrvs
+```
+
 
 == Congratulations!
 
