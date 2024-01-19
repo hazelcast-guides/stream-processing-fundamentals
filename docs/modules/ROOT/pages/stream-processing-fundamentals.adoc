@@ -12,15 +12,13 @@ Make sure to rename this file to the name of your repository and add the filenam
 :page-lang: sql 
 :page-enterprise: 
 :page-est-time: 30 mins 
-:description: Build a Hazelcast Pipeline for monitoring and reacting to telemetry from a machine shop.
+:description: Use the Hazelcast Pipeline API to build an application for modifying machine shop operations based on real time telemetry. 
 
 {description}
 
 == Context
 
-We will be building a Hazelcast Pipeline for monitoring and reacting to telemetry from a machine shop.
-
-ACME operates thousands of machines, each reporting several datapoints per second. Measurements include things like bit temperature and RPM.Breakage is expensive, both in replacement parts and in downtime. We want to go beyond maintenance schedules and monitor operations in real time. If excessive bit temperatures are caught in time, breakage can be averted by immediately reducing the cutting speed.
+ACME operates thousands of machines, each reporting several datapoints per second. Measurements include things like bit temperature and RPM. Breakage is expensive, both in replacement parts and in downtime. Maintenance schedules can prevent some loss, but we want to go beyond that to monitor operations in real time. If excessive bit temperatures are caught in time, breakage can be averted by immediately reducing the cutting speed.
 
 Each machine has its own parameters for acceptable bit temperature, which are stored in a `machine_profiles` IMap.   Our Pipeline will do this by sending "green" / "orange" / "red" signals to the machines 
 via the `machine_controls` IMap.  A schematic of the lab is shown below.
@@ -33,7 +31,7 @@ You will need the following installed on your system:
 * https://www.oracle.com/java/technologies/downloads/[JDK 17 or later]
 * https://maven.apache.org/download.cgi[Maven 3.8 or later]
 * Your preferred Java IDE (We recommend https://www.jetbrains.com/idea/download/?source=google&medium=cpc&campaign=AMER_en_US-PST+MST_IDEA_Branded&term=intellij+idea&content=602143185985&gad=1&gclid=Cj0KCQiAr8eqBhD3ARIsAIe-buM14qxoPph8ClqF1e4IL-xsv9LLe9w35ts2Q7Pt1uoS6vqc-8K-Cm0aAv1oEALw_wcB&section=mac[IntelliJ IDEA])
-* https://docs.hazelcast.com/clc/5.3.5/install-clc[Hazelcast Command Line Client]
+* https://docs.hazelcast.com/clc/latest/install-clc[Hazelcast Command Line Client]
 * https://www.docker.com/products/docker-desktop/[Docker Desktop]
 
 == Step 1: Validate the Lab Environment
@@ -45,7 +43,7 @@ docker compose up -d
 docker compose ps
 ```
 +
-You should see  4 services up and running.  You may also see a 5th service called `refdata_loader` which exits after 
+You should see  four services up and running.  You may also see a fifth service called `refdata_loader` which exits after 
 it has loaded data into the `machine_profiles` map. 
 +
 Each service is described briefly below.
