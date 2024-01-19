@@ -12,8 +12,11 @@ Make sure to rename this file to the name of your repository and add the filenam
 :page-lang: sql 
 :page-enterprise: 
 :page-est-time: 30 mins 
-
 :description: Build a Hazelcast Pipeline for monitoring and reacting to telemetry from a machine shop.
+
+{description}
+
+== Context
 
 We will be building a Hazelcast Pipeline for monitoring and reacting to telemetry from a machine shop.
 
