@@ -52,6 +52,8 @@ services:
           machinestatus_response
     networks:
       - hznet
+    profiles:
+      - disabled
 
   submit-status-service-job-2:
     image: hazelcast/hazelcast-enterprise:5.3.1
@@ -68,8 +70,6 @@ services:
           machinestatus_response
     networks:
       - hznet
-    profiles:
-      - disabled
 
   refdata-loader:
     image: amazoncorretto:11
@@ -158,6 +158,8 @@ services:
       - ".:/project"
     networks:
       - hznet
+    profiles:
+      - disabled
 
   load-routing-config-2:
     image: amazoncorretto:21
@@ -172,8 +174,6 @@ services:
       - ".:/project"
     networks:
       - hznet
-    profiles:
-      - disabled
 
   dump-routing-config:
     image: amazoncorretto:21
