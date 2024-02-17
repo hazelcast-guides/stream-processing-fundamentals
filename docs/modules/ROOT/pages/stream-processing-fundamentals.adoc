@@ -35,6 +35,8 @@ You will need the following installed on your system:
 * https://www.docker.com/products/docker-desktop/[Docker Desktop]
 
 == Step 1: Validate the Lab Environment
+. Download the repo from https://github.com/hazelcast-guides/stream-processing-fundamentals/
+
 .  Run the following commands to start your lab environment.
 +
 ```shell
