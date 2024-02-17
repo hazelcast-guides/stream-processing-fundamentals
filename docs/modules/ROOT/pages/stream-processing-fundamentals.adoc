@@ -184,7 +184,7 @@ You will do all of your work in the `createPipeline` method of this job. It alwa
 +
 [NOTE] 
 
-We use the Shade plugin to bundle all project dependencies, other than Hazelcast, into a single jar. The Hazelcast classes should not be included because they are already on the server. Code with `com.hazelcast` package names cannot be deployed to a Viridian cluster.
+We use the Shade plugin to bundle all project dependencies, other than Hazelcast, into a single jar. The Hazelcast classes should not be included because they are already on the server. Code with `com.hazelcast` package names cannot be deployed to a Hazelcast Cloud cluster.
 +
 Currently, the `createPipeline` method contains only a source (reading from the `machine_events` map) and a sink, which simply logs the events to the console.  This can be useful during debugging. In the next step, you'll make a small change to the Pipeline and walk through a typical code/test cycle.
 
@@ -236,13 +236,13 @@ docker compose logs --follow event_generator
 NOTE: If at any point you get stuck, you can refer to the solution which you will find in the
 *hazelcast.platform.labs.machineshop.solutions* package.
 
-== Step 6: Deploy  to Viridian
+== Step 6: Deploy to Hazelcast Cloud
 
-In this step, you will deploy your temperature monitoring Pipeline to a Viridian cluster and connect the UI, refdata loader and event_generator to it as well.
+In this step, you will deploy your temperature monitoring Pipeline to a Hazelcast Cloud cluster. You will also connect the cloud cluster to the UI, refdata loader and event_generator.
 
-. If you haven't already done so, navigate to https://viridian.hazelcast.com, create an account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  
+. If you haven't already done so, navigate to https://cloud.hazelcast.com, create an account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  
 
-. After the cluster is deployed, go to the CLI section of the "Quick Connection Guide" as shown below. Follow steps 2  and 3 to set up CLC for your Viridian cluster. 
+. After the cluster is deployed, go to the CLI section of the "Quick Connection Guide" as shown below. Follow steps 2  and 3 to set up CLC for your cloud cluster. 
 +
 image:viridian-clc-config.png[viridian-clc-config]
 
