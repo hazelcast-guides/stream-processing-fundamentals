@@ -20,32 +20,60 @@ import java.util.Properties;
 
 public class AggregationPipeline {
 
+    /**
+     * Creates a Pipeline which receives events from Kafka, aggregates them, and writes then into
+     * the .
+     *
+     * @param kafkaBootsrapServers
+     * @param kafkaTopic
+     * @return an event processing Pipeline
+     */
     public static Pipeline createPipeline(String kafkaBootsrapServers, String kafkaTopic){
         Pipeline pipeline = Pipeline.create();
 
+        /*
+         * Create a StreamSource to read from the Kafka topic
+         */
         Properties kafkaConnectionProps = new Properties();
         kafkaConnectionProps.setProperty("bootstrap.servers", kafkaBootsrapServers);
         kafkaConnectionProps.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         kafkaConnectionProps.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        StreamSource<Map.Entry<String, String>> kafkaSource =
-                KafkaSources.kafka(kafkaConnectionProps, kafkaTopic);
+        StreamSource<Map.Entry<String, String>> kafkaSource = KafkaSources.kafka(kafkaConnectionProps, kafkaTopic);
 
+        /*
+         * Read a stream of Map.Entry<String,String> from the stream.  Wait 2s for late entries.
+         */
         StreamStage<Map.Entry<String, String>> kafkaRecords =
                 pipeline.readFrom(kafkaSource)
                         .withNativeTimestamps(2000)
                         .setName("read Kafka");
 
+        /*
+         * Create a Jackson Object Mapper to use as a service.  Since it's a shared service, there will be 
+         * one instance per node and all threads will share it. Creating the ObjectMapper once and sharing it 
+         * is better than creating an instance to process each event.
+         * 
+         * Use the ObjectMapper to parse the json in the event, return a JsonNode
+         *
+         * INPUT: Map.Entry<String, String>The GenericRecord is a MachineStatusEvent.
+         *        For the specific field names, see the comment
+         *        at the top of this class.
+         *
+         * OUTPUT: KeyedWindowResult<String,Double>
+         *       The key is the serial number and the value is the average temperature
+         *
+         */
         ServiceFactory<?, ObjectMapper> objectMapperServiceFactory =
                 ServiceFactories.sharedService(ctx -> new ObjectMapper());
-        StreamStage<JsonNode> json = kafkaRecords.mapUsingService(objectMapperServiceFactory, (om, entry) ->  om.readTree(entry.getValue()))
+        StreamStage<JsonNode> json = kafkaRecords.mapUsingService(objectMapperServiceFactory, 
+                        (om, entry) ->  om.readTree(entry.getValue()))
                 .setName("parse json");
-
-
+        
         /*
          * Group the events by serial number. For each serial number, compute the average temperature over a 10s
          * tumbling window.
          *
-         * INPUT: Map.Entry<String, GenericRecord>
+         * INPUT: Map.Entry<String, JsonNode>
          *        The GenericRecord is a MachineStatusEvent. For the specific field names, see the comment
          *        at the top of this class.
          *
@@ -56,7 +84,7 @@ public class AggregationPipeline {
         StreamStage<KeyedWindowResult<String, Double>> averageTemps =
                 json.groupingKey(entry -> entry.get("serialNum").asText())
                     .window(WindowDefinition.tumbling(10000))
-                    .aggregate(AggregateOperations.averagingLong(item -> item.get("bitTemp").asLong()))
+                    .aggregate(AggregateOperations.averagingLong(entry -> entry.get("bitTemp").asLong()))
                     .setName("Average Temps");
 
         // TODO - could I get away with not using GenericRecord here or will it cause class loading problems ?
