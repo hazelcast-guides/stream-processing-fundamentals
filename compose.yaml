@@ -1,10 +1,9 @@
 services:
 
-  hz:
-    image: hazelcast/hazelcast:5.3
+  hz1:
+    image: hazelcast/hazelcast:5.4
     environment:
       JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
-      CLASSPATH: /project/common/target/common-1.0-SNAPSHOT.jar
     volumes:
       - ".:/project"
     networks:
@@ -12,21 +11,30 @@ services:
     ports:
       - "5701:5701"
 
+  hz2:
+    image: hazelcast/hazelcast:5.4
+    environment:
+      JAVA_OPTS: -Dhazelcast.config=/project/hazelcast.yaml
+    volumes:
+      - ".:/project"
+    networks:
+      - hznet
+
   mc:
-    image: hazelcast/management-center:5.3
+    image: hazelcast/management-center:5.4
     environment:
       MC_DEFAULT_CLUSTER: dev
-      MC_DEFAULT_CLUSTER_MEMBERS: hz
+      MC_DEFAULT_CLUSTER_MEMBERS: hz1
     ports:
       - "8080:8080"
     networks:
       - hznet
 
   refdata_loader:
-    image: openjdk:11
+    image: openjdk:21
     command: java -jar /project/refdata-loader/target/refdata-loader-1.0-SNAPSHOT.jar
     environment:
-      HZ_SERVERS: hz
+      HZ_SERVERS: hz1
       HZ_CLUSTER_NAME: dev
       MACHINE_COUNT: 10
       SIMULATOR_CONFIG_FILE: /project/config/machine_profiles_small.csv
@@ -36,28 +44,57 @@ services:
       - hznet
 
   event_generator:
-    image: openjdk:11
+    image: openjdk:21
     command: java -jar /project/event-generator/target/event-generator-1.0-SNAPSHOT.jar
     environment:
-      HZ_SERVERS: hz
+      HZ_SERVERS: hz1
       HZ_CLUSTER_NAME: dev 
       MACHINE_COUNT: 10
+      KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
+      KAFKA_TOPIC: "machine_events"
     volumes:
       - ".:/project"
     networks:
       - hznet
   
-  ui:
-    build:
-      context: ./ui
-    environment:
-      HZ_SERVERS: hz
-      HZ_CLUSTER_NAME: dev
-    ports:
-      - "8050:8050"
+#  ui:
+#    build:
+#      context: ./ui
+#    environment:
+#      HZ_SERVERS: hz1
+#      HZ_CLUSTER_NAME: dev
+#    ports:
+#      - "8050:8050"
+#    networks:
+#      - hznet
+
+  redpanda:
+    image: redpandadata/redpanda:v23.2.12
+    command:
+      - redpanda
+      - start
+      - --smp
+      - '1'
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - '0'
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
     networks:
       - hznet
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS: "redpanda:9092"
+    ports:
+      - 8000:8080
+    networks:
+      - hznet
 
 networks:
   hznet: 

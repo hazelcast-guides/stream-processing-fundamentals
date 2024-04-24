@@ -6,7 +6,7 @@ import com.hazelcast.nio.serialization.PortableWriter;
 
 import java.io.IOException;
 
-public class MachineStatusEvent implements Portable {
+public class MachineStatusEvent  {
     private String serialNum;
     private long eventTime;
     private int bitRPM;
@@ -82,39 +82,6 @@ public class MachineStatusEvent implements Portable {
                 ", bitBitPositionY=" + bitPositionY +
                 ", bitPositionZ=" + bitPositionZ +
                 '}';
-    }
-
-    @Override
-    public int getFactoryId() {
-        return MachineShopPortableFactory.ID;
-    }
-
-    public static final int ID= 2;
-    @Override
-    public int getClassId() {
-        return MachineStatusEvent.ID;
-    }
-
-    @Override
-    public void writePortable(PortableWriter writer) throws IOException {
-        writer.writeString("serialNum", this.serialNum);
-        writer.writeLong("eventTime", this.eventTime);
-        writer.writeInt("bitRPM", this.bitRPM);
-        writer.writeShort("bitTemp", this.bitTemp);
-        writer.writeInt("bitPositionX", this.bitPositionX);
-        writer.writeInt("bitPositionY", this.bitPositionY);
-        writer.writeInt("bitPositionZ", this.bitPositionZ);
-    }
-
-    @Override
-    public void readPortable(PortableReader reader) throws IOException {
-        this.serialNum = reader.readString("serialNum");
-        this.eventTime = reader.readLong("eventTime");
-        this.bitRPM = reader.readInt("bitRPM");
-        this.bitTemp = reader.readShort("bitTemp");
-        this.bitPositionX = reader.readInt("bitPositionX");
-        this.bitPositionY = reader.readInt("bitPositionY");
-        this.bitPositionZ = reader.readInt("bitPositionZ");
     }
 
 }

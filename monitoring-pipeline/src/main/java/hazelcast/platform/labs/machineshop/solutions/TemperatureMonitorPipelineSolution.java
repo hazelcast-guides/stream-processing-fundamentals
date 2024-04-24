@@ -1,5 +1,6 @@
 package hazelcast.platform.labs.machineshop.solutions;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.jet.aggregate.AggregateOperations;
@@ -7,12 +8,16 @@ import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple4;
+import com.hazelcast.jet.kafka.KafkaSinks;
+import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
+import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
 import hazelcast.platform.labs.machineshop.domain.Names;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Properties;
 
 /*
  **************** SOLUTION ****************
@@ -21,7 +26,7 @@ import java.util.Map;
 public class TemperatureMonitorPipelineSolution {
 
     /*
-     * Used for stateful filtering.  Must be serializable as it is included in stream snapshot
+     * Used for stateful filtering.  Must be serializable as it is included in stream snapshots
      */
     public static class CurrentState implements Serializable {
         private String color;
@@ -57,11 +62,10 @@ public class TemperatureMonitorPipelineSolution {
      *
      * DataStructureDefinitions
      *
-     *   GenericRecord of MachineStatusEvent;
-     *     GenericRecord machineEvent;
-     *     String serialNum = machineEvent.getString("serialNum);
-     *     long eventTime = machineEvent.getInt64("eventTime");
-     *     short bitTemp = machineEvent.getInt16("bitTemp");
+     *   GenericRecord of MachineStatusSummary;
+     *     GenericRecord machineStatusSummary;
+     *     String serialNum = machineStatusSummary.getString("serialNum);
+     *     short averageBitTemp10s = machineStatusSummary.getInt16("averageBitTemp10s");
      *
      *   GenericRecord of MachineProfile
      *     GenericRecord profile;
@@ -71,30 +75,70 @@ public class TemperatureMonitorPipelineSolution {
      *     short warningTemp = profile.getInt16("warningTemp");
      *     short criticalTemp = profile.getInt16("criticalTemp");
      *
+     *   The incoming events are json encoded.  An example is shown below
+     *      {
+	 *         "serialNum": "UVQ438",
+	 *         "eventTime": 1713994242415,
+	 *         "bitRPM": 10000,
+	 *         "bitTemp": 147,
+	 *         "bitPositionX": 0,
+	 *         "bitPositionY": 0,
+	 *         "bitPositionZ": 0
+	 *      }
+     *
      * Useful References:
-     *    https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStage.html
+     *    https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStage.html
      */
-    public static Pipeline createPipeline(){
+    public static Pipeline createPipeline(Properties kafkaConnectionProps,
+                                          String telemetryTopicName,
+                                          String statusTopicName){
         Pipeline pipeline = Pipeline.create();
 
         /*
-         * Read events from the "machine_events" map.  The key is serialNumber and the value is a GenericRecord
-         * containing a MachineStatusEvent.
+         * Set up Sources, Sinks and Services for this Pipeline
          */
-        StreamStage<Map.Entry<String, GenericRecord>> statusEvents = pipeline.readFrom(
-                        Sources.<String, GenericRecord>mapJournal(
-                                Names.EVENT_MAP_NAME,
-                                JournalInitialPosition.START_FROM_OLDEST))
-                .withTimestamps(item -> item.getValue().getInt64("eventTime"), 1000)
-                .setName("machine status events");
+        StreamSource<Map.Entry<String, String>> telemetryTopic =
+                KafkaSources.kafka(kafkaConnectionProps, telemetryTopicName);
+
+        Sink<Map.Entry<String, String>> machineStatusTopic = KafkaSinks.kafka(kafkaConnectionProps, statusTopicName);
+
+        /*
+         * We want to be able to process 1000's of events per second, or more.  We don't want to create an instance of
+         * ObjectMapper every time we parse or format json. Instead, we use a "Service" to create one instance
+         * on each node that will be shared by all processors.  This is done through ServiceFactories like the
+         * 2 declared below.
+         */
+        ServiceFactory<?, ObjectMapper> jsonParserFactory = ServiceFactories.sharedService((ctx) -> new ObjectMapper());
+        ServiceFactory<?, ObjectMapper> jsonFormatterFactory = ServiceFactories.sharedService((ctx) -> new ObjectMapper());
+
+        /*
+         * Read events from the telemetry topic.  The key, which will be used to partition the consumers, is
+         * the machine serial number and the value is the json-encoded event
+         */
+        StreamStage<Map.Entry<String, String>> rawEvents =
+                pipeline.readFrom(telemetryTopic).withNativeTimestamps(2000).setName("read telemetry events");
+
+        /*
+         * Parse the JSON value into a MachineStatusEvent
+         *
+         * INPUT: Map.Entry<String, String>
+         *        The key is the machine serial number and the value is a JSON formatted MachineStatusEvent
+         *
+         * OUTPUT: MachineStatusEvent
+         *
+         * Do not create an ObjectMapper instance every time an event is processed.  Use mapUsingService instead.
+         *    See https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStage.html#mapUsingService(com.hazelcast.jet.pipeline.ServiceFactory,com.hazelcast.function.BiFunctionEx)
+         */
+        StreamStage<MachineStatusEvent> machineEvents = rawEvents.mapUsingService(jsonParserFactory,
+                        (mapper, event) -> mapper.readValue(event.getValue(), MachineStatusEvent.class))
+                .setName("parse json");
+
 
         /*
          * Group the events by serial number. For each serial number, compute the average temperature over a 10s
          * tumbling window.
          *
-         * INPUT: Map.Entry<String, GenericRecord>
-         *        The GenericRecord is a MachineStatusEvent. For the specific field names, see the comment
-         *        at the top of this class.
+         * INPUT: MachineStatusEvent
          *
          * OUTPUT: KeyedWindowResult<String, Double>
          *
@@ -105,15 +149,15 @@ public class TemperatureMonitorPipelineSolution {
          *                                  .aggregate(AggregateOperations.averagingLong( GET BIT TEMP LAMBDA);
          *
          * For available Window Definitions and Aggregations, see:
-         *   https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/WindowDefinition.html
-         *   https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/aggregate/AggregateOperations.html
+         *   https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/WindowDefinition.html
+         *   https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/aggregate/AggregateOperations.html
          *
          */
-        StreamStage<KeyedWindowResult<String, Double>> averageTemps = statusEvents
-                .groupingKey( entry -> entry.getValue().getString("serialNum"))
+        StreamStage<KeyedWindowResult<String, Double>> averageTemps = machineEvents
+                .groupingKey(MachineStatusEvent::getSerialNum)
                 .window(WindowDefinition.tumbling(10000))
-                .aggregate(AggregateOperations.averagingLong(item -> item.getValue().getInt16("bitTemp")))
-                .setName("Average Temp").peek();
+                .aggregate(AggregateOperations.averagingLong(MachineStatusEvent::getBitTemp))
+                .setName("Average Temp");
 
         /*
          * Look up the machine profile for this machine from the machine_profiles map.  Output a

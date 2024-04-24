@@ -12,12 +12,14 @@ public class Names {
 
     public static final String PROFILE_MAP_NAME = "machine_profiles";
 
-    public static final String EVENT_MAP_NAME = "machine_events";
-
     public static final String CONTROLS_MAP_NAME = "machine_controls";
 
     public static final String SYSTEM_ACTIVITIES_MAP_NAME = "system_activities";
 
+    /*
+     * This method, though not currently used, could be used to configure a cloud instance of Hazelcast
+     * where the initial configuration is not under the user's control
+     */
     public static class ProfileMapConfigurationTask implements Runnable, HazelcastInstanceAware, Serializable {
 
         private transient HazelcastInstance hz;
@@ -34,26 +36,4 @@ public class Names {
         }
     }
 
-    public static class EventMapConfigurationTask implements Runnable, HazelcastInstanceAware, Serializable {
-
-        private transient HazelcastInstance hz;
-        @Override
-        public void run() {
-            hz.getConfig().addMapConfig(new MapConfig(EVENT_MAP_NAME)
-                    .setInMemoryFormat(InMemoryFormat.BINARY)
-                    .setBackupCount(1)
-                    .setEventJournalConfig(
-                            new EventJournalConfig()
-                                    .setEnabled(true)
-                                    .setCapacity(3000000)
-                                    .setTimeToLiveSeconds(0)
-                    )
-            );
-        }
-
-        @Override
-        public void setHazelcastInstance(HazelcastInstance hazelcastInstance) {
-            this.hz = hazelcastInstance;
-        }
-    }
 }

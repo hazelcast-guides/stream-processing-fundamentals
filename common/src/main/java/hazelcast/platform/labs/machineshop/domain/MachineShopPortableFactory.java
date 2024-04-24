@@ -9,8 +9,10 @@ public class MachineShopPortableFactory implements PortableFactory {
     public Portable create(int classId) {
         if (classId == MachineProfile.ID)
             return new MachineProfile();
-        else if (classId == MachineStatusEvent.ID)
-            return new MachineStatusEvent();
+        else if (classId == MachineStatusSummary.ID)
+            return new MachineStatusSummary();
+//        else if (classId == StatusServiceResponse.ID)
+//            return new StatusServiceResponse();
         else
             return null;
     }

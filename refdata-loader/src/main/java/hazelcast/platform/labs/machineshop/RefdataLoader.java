@@ -56,20 +56,6 @@ public class RefdataLoader {
 
     private static final List<Profile> profiles = new ArrayList<>();
 
-    private static final String EVENT_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.EVENT_MAP_NAME + " (" +
-            "serialNum VARCHAR, " +
-            "eventTime BIGINT, " +
-            "bitRPM INTEGER, " +
-            "bitTemp SMALLINT, " +
-            "bitPositionX INTEGER, " +
-            "bitPositionY INTEGER, " +
-            "bitPositionZ INTEGER) " +
-            "TYPE IMap OPTIONS (" +
-            "'keyFormat' = 'java'," +
-            "'keyJavaClass' = 'java.lang.String'," +
-            "'valueFormat' = 'compact'," +
-            "'valueCompactTypeName' = 'hazelcast.platform.labs.machineshop.domain.MachineStatusEvent')";
-
     private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
             "location VARCHAR, " +
@@ -176,7 +162,6 @@ public class RefdataLoader {
     private static void doSQLMappings(HazelcastInstance hzClient){
         hzClient.getSql().execute(PROFILE_MAPPING_SQL);
         hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
-        hzClient.getSql().execute(EVENT_MAPPING_SQL);
         hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
         hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
         System.out.println("Initialized SQL Mappings");
@@ -187,17 +172,6 @@ public class RefdataLoader {
                 .setInMemoryFormat(InMemoryFormat.BINARY)
                 .setBackupCount(1));
 
-        hzClient.getConfig().addMapConfig(new MapConfig(Names.EVENT_MAP_NAME)
-                .setInMemoryFormat(InMemoryFormat.BINARY)
-                .setBackupCount(1)
-                .setEventJournalConfig(
-                        new EventJournalConfig()
-                                .setEnabled(true)
-                                .setCapacity(3000000)
-                                .setTimeToLiveSeconds(0)
-                ));
-//        hzClient.getExecutorService("default").execute(new Names.ProfileMapConfigurationTask());
-//        hzClient.getExecutorService("default").execute(new Names.EventMapConfigurationTask());
         System.out.println("Initialized Map Configurations");
     }
     public static void main(String []args){

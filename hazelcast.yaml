@@ -1,11 +1,9 @@
 hazelcast:
   map:
-    machine_events:
-      event-journal: 
-        enabled: true
-        capacity: 3600000
+    machine_profiles:
+      in-memory-format: OBJECT
 
-  jet: 
+  jet:
     enabled: true
     resource-upload-enabled: true
 

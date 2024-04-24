@@ -1,9 +1,3 @@
-////
-Make sure to rename this file to the name of your repository and add the filename to the README. This filename must not conflict with any existing tutorials.
-////
-
-// Describe the title of your article by replacing 'Tutorial template' with the page name you want to publish.
-
 = Pipeline API Tutorial - The Machine Shop
 // Add required variables
 :page-layout: tutorial
@@ -18,17 +12,19 @@ Make sure to rename this file to the name of your repository and add the filenam
 
 == Context
 
-ACME operates thousands of machines, each reporting several datapoints per second. Measurements include things like bit temperature and RPM. Breakage is expensive, both in replacement parts and in downtime. Maintenance schedules can prevent some loss, but we want to go beyond that to monitor operations in real time. If excessive bit temperatures are caught in time, breakage can be averted by immediately reducing the cutting speed.
+ACME operates thousands of machines, each reporting many datapoints each second. Measurements include things like bit temperature and RPM. Breakage is expensive, both in replacement parts and in downtime. Maintenance schedules can prevent some loss, but we want to go beyond that to monitor operations in real time. If excessive bit temperatures are caught in time, breakage can be averted by immediately reducing the cutting speed.
 
-Each machine has its own parameters for acceptable bit temperature, which are stored in a `machine_profiles` IMap.   Our Pipeline will do this by sending "green" / "orange" / "red" signals to the machines 
-via the `machine_controls` IMap.  A schematic of the lab is shown below.
+In this lab, we will implement a pipeline which processes telemetry events from a Kafka topic.  The pipeline will parse the events and, for each machine, compute a 10s tumbling average of the bit temperature.  From there the pipeline will fork.  One fork will record the current 10s average to another IMap which will be used for monitoring.  In this lab, a python client uses a listener to watch the IMap containing the 10s averages and displays them in real time.  The other fork of the pipeline looks up machine specific looks up machine specific limits in the "machine_profiles" map and applies a "green"/"orange"/"red" label to each 10s average.  Finally, the pipeline performs de-duplication so that only changes
+to the "green"/"orange"/"red" status remain and, finally, each status change is published to a topic there the machine emulator will pick it up and adjust the cutting speed accordingly.
 
-image:pipeline.png[schematic]
+A schematic is shown below.
+
+image:blueprint.png[schematic]
 
 == Before You Begin
 You will need the following installed on your system:
 
-* https://www.oracle.com/java/technologies/downloads/[JDK 17 or later]
+* JDK 21 or later
 * https://maven.apache.org/download.cgi[Maven 3.8 or later]
 * Your preferred Java IDE (We recommend https://www.jetbrains.com/idea/download/?source=google&medium=cpc&campaign=AMER_en_US-PST+MST_IDEA_Branded&term=intellij+idea&content=602143185985&gad=1&gclid=Cj0KCQiAr8eqBhD3ARIsAIe-buM14qxoPph8ClqF1e4IL-xsv9LLe9w35ts2Q7Pt1uoS6vqc-8K-Cm0aAv1oEALw_wcB&section=mac[IntelliJ IDEA])
 * https://docs.hazelcast.com/clc/latest/install-clc[Hazelcast Command Line Client]
@@ -45,8 +41,7 @@ docker compose up -d
 docker compose ps
 ```
 +
-You should see  four services up and running.  You may also see a fifth service called `refdata_loader` which exits after 
-it has loaded data into the `machine_profiles` map. 
+You should see  7 services up and running.  You may also see an eighth service called `refdata_loader` which exits after it has loaded data into the `machine_profiles` map.
 +
 Each service is described briefly below.
 +
@@ -55,8 +50,11 @@ Each service is described briefly below.
 | *Service*
 | *Description*  
 
-| hz 
-| A Hazelcast node
+| hz1
+| A Hazelcast node, 1 of 2.  This node has a port mapping so that you can connect to it using CLC at localhost:5701.
+
+| hz2
+| A Hazelcast node, 2 of 2. Will form a cluster with hz1
 
 | mc              
 | The Hazelcast Management Center. Accessible at http://localhost:8080.   
@@ -65,53 +63,45 @@ Each service is described briefly below.
 | Emulates traffic from a set of machines. Writes to `machine_events`. Listens to `machine_controls`. 
 
 | ui
-| A Python program that listens to the `machine_events` map and displays temperature data graphically. Accessible at http://localhost:8050 
+| A Python program that listens to the `machine_events` map and displays temperature data graphically. Accessible at http://localhost:8050
+
+| redpanda
+| A Kafka-compatible message broker.
+
+| kafka-ui
+| A UI that can be used for viewing events in the Kafka topics used byt his lab.   It is accessible at http://localhost:8000
 |===
-
-. Access the UI at http://localhost:8050. Specify a Location and Block to see a live display of the current temperature of a subset of machines.  Valid locations are "San Antonio" and "Los Angeles". Valid blocks are "A" and "B". 
-
-[NOTE]
-Machines in block "A" are very likely to run hot. You should see something similar to the image below.
-
-image:UI.png[UI]
 
 == Step 2: Get to Know the Data
 
-Data in Hazelcast clusters can be accessed via SQL.  For more details, see https://docs.hazelcast.com/hazelcast/latest/sql/get-started-sql
+. Access the Kafka UI at http://localhost:8000 and observe the events in the "machine_events" topic.
++
+image:events.png[events]
 
-. Open up the management center (http://localhost:8080) and click on the "SQL Browser" button.
+. Open up the management center (http://localhost:8080) and select "SQL" from the menu on the left.
 +
 image:MC_SQL.png[MC]
 
-. Run `select * from machine_profiles` in the SQL Browser.
+. Run `select * from machine_profiles` in the Data Explorer.
 +
 You will see that for each machine there is a serial number, information about the location and the warning and critical temperature limits for that particular machine.
 +
 image:profiles.png[profiles]
 
-. Run `select * from machine_events`
-+
-image:machine_events.png[events]
-+
-This is the actual data coming from the machines.  
-+
-[NOTE]
-At any given time, only the latest event for each serial number 
-appears in the map, however, the update events are all recorded into something called a `map journal` that can be used as input to a pipeline.  You can verify that the map is constantly being updated by navigating to the `machine_events` map in Management Center and observing the number of put operations.
-+
-image:puts_and_entries.png[Puts]
-
-. In a terminal window, set up the Command Line Client to connect to the Hazelcast instance in Docker, then open a CLC connection.
+. In a terminal window, set up the Command Line Client to connect to the Hazelcast instance in Docker. Note that, in the command below, "Docker" is just a nickname for your cluster.  The configuration will be stored on your local machine, and you will be able to run commands on the cluster by passing `-c Docker`.
 +
 ```shell
 clc config add Docker cluster.name=dev cluster.address=localhost:5701
-clc -c Docker
 ```
 
-. Run the same SQL queries as above.
+. Validate your CLC configuration by running the same query as above via the CLC.
++
+```
+clc -c Docker sql -q "select * from machine_profiles"
+```
 
 [NOTE]
-From this point forward, you can use either Management Center or CLC to run SQL queries and monitor jobs. Management Center will also display the DAG created for submitted jobs.
+From this point forward, you can use either Management Center or CLC to run SQL queries and monitor jobs.
 
 == Step 3: Learn About Data Formats
 
@@ -126,14 +116,17 @@ code, it will be be deserialized as a _GenericRecord_ if the POJO class is not
 on the server's class path. Accordingly, server side code must be written to handle either
 a _GenericRecord_ or a POJO depending on whether the POJO class is present.
 
-In this lab, you will be working with _MachineProfile_ objects and _MachineEvents_, both of which are defined in `common/src/main/java`.  However, those classes are not deployed with your job, so you will need to access them using GenericRecord.  An example of GenericRecord usage is shown below.
+In this lab, you will be working with _MachineProfile_ objects and _MachineStatusSummary_, both of which are defined in `common/src/main/java`.  However, those classes are not deployed with your job, so you will need to access them using GenericRecord.  An example of GenericRecord usage is shown below.
 
 ```java
-GenericRecord machineEvent;
-short bitTemperature = machineEvent.getInt16("bitTemp");
+GenericRecord machineProfile;
+short bitTemperature = machineProfile.getInt16("warningTemp");
 ```
 For more information on GenericRecord and accessing domain objects without domain classes see
-https://docs.hazelcast.com/hazelcast/5.3/clusters/accessing-domain-objects.
+https://docs.hazelcast.com/hazelcast/latest/clusters/accessing-domain-objects.
+
+[NOTE]
+It is OK to use the `MachineStatusEvent` class directly on the server side because, unlike the 2 classes mentioned above, it is never written into an IMap
 
 === Tuples
 
@@ -147,10 +140,10 @@ instead.  Here is an example.
 // and the warning temperature from the machine profile
 
 GenericRecord p;
-GenericRecord e;
+MachineStatusEvent e;
 
 Tuple3<String,Short,Short> newEvent = 
-        Tuple3.tuple3(e.getString("serialNum"), e.getShort("bitTemp"), p.getShort("warningTemp"));
+        Tuple3.tuple3(e.getSerialNum(), e.getBitTemp(), p.getShort("warningTemp"));
 
 // now, if we want to access fields from the 3-tuple, we use f0(), f1() and f2()
 short bitTemp = newEvent.f1();

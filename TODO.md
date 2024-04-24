@@ -1,0 +1,10 @@
+- [ ] Remove Cloud content.
+- [x] Update versions. 
+- [ ] Revisit serialization 
+- [ ] Incorporate User Code Deployment where appropriate 
+- [ ] Incorporate Red Panda and an event queue ?
+- [ ] Reimplement pipeline solution and skeleton
+- [ ] Re-route the UI to use the machine_aggregates map
+- [ ] Update the documentation
+  - [ ] README
+  - [ ] code
