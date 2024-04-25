@@ -131,15 +131,14 @@ public class MachineProfile implements Portable {
     }
 
 
-    public static int ID = 1;
     @Override
     public int getFactoryId() {
-        return MachineShopPortableFactory.ID;
+        return PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID;
     }
 
     @Override
     public int getClassId() {
-        return MachineProfile.ID;
+        return PortableHelper.MACHINE_PROFILE_ID;
     }
 
     @Override

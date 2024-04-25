@@ -52,7 +52,7 @@ public class TemperatureMonitorPipeline {
      *
      * DataStructureDefinitions
      *
-     *   GenericRecord of MachineStatusEvent;
+     *   GenericRecord of MachineEvent;
      *     GenericRecord machineEvent;
      *     String serialNum = machineEvent.getString("serialNum);
      *     long eventTime = machineEvent.getInt64("eventTime");
@@ -74,11 +74,11 @@ public class TemperatureMonitorPipeline {
 
         /*
          * Read events from the "machine_events" map.  The key is serialNumber and the value is a GenericRecord
-         * containing a MachineStatusEvent.
+         * containing a MachineEvent.
          */
         StreamStage<Map.Entry<String, GenericRecord>> statusEvents = pipeline.readFrom(
                         Sources.<String, GenericRecord>mapJournal(
-                                Names.EVENT_MAP_NAME,
+                                "PLACEHOLDER",
                                 JournalInitialPosition.START_FROM_OLDEST))
                 .withTimestamps(item -> item.getValue().getInt64("eventTime"), 1000)
                 .setName("machine status events");
@@ -94,7 +94,7 @@ public class TemperatureMonitorPipeline {
          * tumbling window.
          *
          * INPUT: Map.Entry<String, GenericRecord>
-         *        The GenericRecord is a MachineStatusEvent. For the specific field names, see the comment
+         *        The GenericRecord is a MachineEvent. For the specific field names, see the comment
          *        at the top of this class.
          *
          * OUTPUT: KeyedWindowResult<String, Double>
@@ -211,6 +211,7 @@ public class TemperatureMonitorPipeline {
         return pipeline;
     }
     public static void main(String []args){
+        //TODO set auto-offset-reset
         Pipeline pipeline = createPipeline();
         pipeline.setPreserveOrder(true);
 

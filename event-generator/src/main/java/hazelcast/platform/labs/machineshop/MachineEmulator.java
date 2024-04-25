@@ -2,7 +2,7 @@ package hazelcast.platform.labs.machineshop;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
+import hazelcast.platform.labs.machineshop.domain.MachineEvent;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -16,7 +16,7 @@ public class MachineEmulator implements  Runnable, Callback {
     private int t;
     private SignalGenerator signalGenerator;
 
-    private MachineStatusEvent currStatus;
+    private MachineEvent currStatus;
 
     private final ObjectMapper mapper;
 
@@ -35,7 +35,7 @@ public class MachineEmulator implements  Runnable, Callback {
     }
     @Override
     public synchronized void  run() {
-        currStatus = new MachineStatusEvent();
+        currStatus = new MachineEvent();
         currStatus.setSerialNum(serialNum);
         currStatus.setEventTime(System.currentTimeMillis());
         currStatus.setBitTemp(signalGenerator.compute(t++));
@@ -59,7 +59,7 @@ public class MachineEmulator implements  Runnable, Callback {
         }
     }
 
-    public MachineStatusEvent getCurrStatus(){
+    public MachineEvent getCurrStatus(){
         return currStatus;
     }
 

@@ -8,9 +8,7 @@ import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
-import hazelcast.platform.labs.machineshop.domain.MachineProfile;
-import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
-import hazelcast.platform.labs.machineshop.domain.Names;
+import hazelcast.platform.labs.machineshop.domain.*;
 import hazelcast.platform.labs.viridian.ViridianConnection;
 
 import java.io.*;
@@ -56,6 +54,16 @@ public class RefdataLoader {
 
     private static final List<Profile> profiles = new ArrayList<>();
 
+    private static final String STATUS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.MACHINE_STATUS_MAP_NAME + " (" +
+            "serialNum VARCHAR, " +
+            "averageBitTemp10s SMALLINT) " +
+            "TYPE IMap OPTIONS (" +
+            "'keyFormat' = 'java'," +
+            "'keyJavaClass' = 'java.lang.String'," +
+            "'valueFormat' = 'portable'," +
+            "'valuePortableFactoryId' = '"+ PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID +"'," +
+            "'valuePortableClassId' = '"+ PortableHelper.MACHINE_STATUS_ID  +"')";
+
     private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
             "location VARCHAR, " +
@@ -68,13 +76,9 @@ public class RefdataLoader {
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
-            "'valueFormat' = 'compact'," +
-            "'valueCompactTypeName' = 'hazelcast.platform.labs.machineshop.domain.MachineProfile')";
-    private static final String CONTROLS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.CONTROLS_MAP_NAME +
-            " TYPE IMap OPTIONS (" +
-            "'keyFormat' = 'varchar'," +
-            "'valueFormat' = 'varchar')";
-
+            "'valueFormat' = 'portable'," +
+            "'valuePortableFactoryId' = '"+ PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID  +"'," +
+            "'valuePortableClassId' = '"+ PortableHelper.MACHINE_PROFILE_ID  +"')";
     private static final String SYSTEM_ACTIVITIES_MAPPING_SQL = "CREATE OR REPLACE MAPPING " +
             Names.SYSTEM_ACTIVITIES_MAP_NAME +
             " TYPE IMap OPTIONS (" +
@@ -160,14 +164,15 @@ public class RefdataLoader {
     }
 
     private static void doSQLMappings(HazelcastInstance hzClient){
+        hzClient.getSql().execute(STATUS_MAPPING_SQL);
         hzClient.getSql().execute(PROFILE_MAPPING_SQL);
-        hzClient.getSql().execute(CONTROLS_MAPPING_SQL);
         hzClient.getSql().execute(SYSTEM_ACTIVITIES_MAPPING_SQL);
         hzClient.getSql().execute(MACHINE_PROFILE_LOCATION_INDEX_SQL);
         System.out.println("Initialized SQL Mappings");
     }
 
     private static void configureMaps(HazelcastInstance hzClient){
+        // the machine_profile map is read frequently by the pipeline so it makes sense to use Object format
         hzClient.getConfig().addMapConfig(new MapConfig(Names.PROFILE_MAP_NAME)
                 .setInMemoryFormat(InMemoryFormat.BINARY)
                 .setBackupCount(1));
@@ -187,7 +192,7 @@ public class RefdataLoader {
         clientConfig.getConnectionStrategyConfig().setAsyncStart(false);
         clientConfig.getConnectionStrategyConfig().setReconnectMode(ClientConnectionStrategyConfig.ReconnectMode.ON);
         clientConfig.getSerializationConfig().getPortableFactories()
-            .put(MachineShopPortableFactory.ID, new MachineShopPortableFactory());
+            .put(PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID, new MachineShopPortableFactory());
 
         HazelcastInstance hzClient = HazelcastClient.newHazelcastClient(clientConfig);
 

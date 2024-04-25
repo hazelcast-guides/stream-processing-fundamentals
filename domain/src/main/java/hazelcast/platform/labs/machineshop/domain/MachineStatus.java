@@ -4,7 +4,7 @@ import com.hazelcast.nio.serialization.*;
 
 import java.io.IOException;
 
-public class MachineStatusSummary implements Portable {
+public class MachineStatus implements Portable {
     private String serialNumber;
     private short  averageBitTemp10s;
     public String getSerialNumber() {
@@ -25,22 +25,20 @@ public class MachineStatusSummary implements Portable {
 
     @Override
     public String toString() {
-        return "MachineStatusSummary{" +
+        return "MachineStatus{" +
                 "serialNumber='" + serialNumber + '\'' +
                 ", averageBitTemp10s=" + averageBitTemp10s +
                 '}';
     }
 
-    public static final int ID = 3;
-
     @Override
     public int getFactoryId() {
-        return MachineShopPortableFactory.ID;
+        return PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID;
     }
 
     @Override
     public int getClassId() {
-        return MachineStatusSummary.ID;
+        return PortableHelper.MACHINE_STATUS_ID;
     }
 
     @Override
@@ -54,10 +52,4 @@ public class MachineStatusSummary implements Portable {
         this.serialNumber = portableReader.readString("serialNumber");
         this.averageBitTemp10s = portableReader.readShort("averageBitTemp10s");
     }
-
-    public static ClassDefinition CLASS_DEFINITION =
-            new ClassDefinitionBuilder(MachineShopPortableFactory.ID, MachineStatusSummary.ID)
-                    .addStringField("serialNumber")
-                    .addShortField("averageBitTemp10s")
-                    .build();
 }

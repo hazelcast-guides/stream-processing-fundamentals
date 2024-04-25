@@ -1,10 +1,11 @@
 - [ ] Remove Cloud content.
 - [x] Update versions. 
 - [ ] Revisit serialization 
+- [x] Separate out the domain classes from other useful classes.
 - [ ] Incorporate User Code Deployment where appropriate 
-- [ ] Incorporate Red Panda and an event queue ?
-- [ ] Reimplement pipeline solution and skeleton
+- [x] Incorporate Red Panda and an event queue ?
+- [ ] Update event generator to listen on K topic
+- [x] Reimplement pipeline solution
+- [ ] Reimplement pipeline skeleton
 - [ ] Re-route the UI to use the machine_aggregates map
 - [ ] Update the documentation
-  - [ ] README
-  - [ ] code

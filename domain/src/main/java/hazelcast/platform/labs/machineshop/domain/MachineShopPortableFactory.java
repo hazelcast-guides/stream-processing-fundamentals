@@ -4,13 +4,12 @@ import com.hazelcast.nio.serialization.Portable;
 import com.hazelcast.nio.serialization.PortableFactory;
 
 public class MachineShopPortableFactory implements PortableFactory {
-    public static final int ID = 1;
     @Override
     public Portable create(int classId) {
-        if (classId == MachineProfile.ID)
+        if (classId == PortableHelper.MACHINE_PROFILE_ID)
             return new MachineProfile();
-        else if (classId == MachineStatusSummary.ID)
-            return new MachineStatusSummary();
+        else if (classId == PortableHelper.MACHINE_STATUS_ID)
+            return new MachineStatus();
 //        else if (classId == StatusServiceResponse.ID)
 //            return new StatusServiceResponse();
         else

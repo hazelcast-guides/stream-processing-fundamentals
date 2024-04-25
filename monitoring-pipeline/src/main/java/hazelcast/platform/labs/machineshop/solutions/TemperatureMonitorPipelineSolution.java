@@ -12,8 +12,10 @@ import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
-import hazelcast.platform.labs.machineshop.domain.MachineStatusEvent;
+import com.hazelcast.nio.serialization.genericrecord.GenericRecordBuilder;
+import hazelcast.platform.labs.machineshop.domain.MachineEvent;
 import hazelcast.platform.labs.machineshop.domain.Names;
+import hazelcast.platform.labs.machineshop.domain.PortableHelper;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -24,6 +26,7 @@ import java.util.Properties;
  */
 
 public class TemperatureMonitorPipelineSolution {
+
 
     /*
      * Used for stateful filtering.  Must be serializable as it is included in stream snapshots
@@ -57,12 +60,19 @@ public class TemperatureMonitorPipelineSolution {
         return result;
     }
 
+    public static GenericRecord machineStatus(String serialNum, short averageBitTemp10s){
+        return GenericRecordBuilder.portable(PortableHelper.MACHINE_STATUS_CLASS_DEFINITION)
+                .setString("serialNumber", serialNum)
+                .setInt16("averageBitTemp10s", averageBitTemp10s)
+                .build();
+    }
+
     /*
      * Write your Pipeline here.
      *
      * DataStructureDefinitions
      *
-     *   GenericRecord of MachineStatusSummary;
+     *   GenericRecord of MachineStatus;
      *     GenericRecord machineStatusSummary;
      *     String serialNum = machineStatusSummary.getString("serialNum);
      *     short averageBitTemp10s = machineStatusSummary.getInt16("averageBitTemp10s");
@@ -91,25 +101,22 @@ public class TemperatureMonitorPipelineSolution {
      */
     public static Pipeline createPipeline(Properties kafkaConnectionProps,
                                           String telemetryTopicName,
-                                          String statusTopicName){
+                                          String controlsTopicName){
         Pipeline pipeline = Pipeline.create();
 
         /*
-         * Set up Sources, Sinks and Services for this Pipeline
+         * Set up the Kafka Source this Pipeline
          */
         StreamSource<Map.Entry<String, String>> telemetryTopic =
                 KafkaSources.kafka(kafkaConnectionProps, telemetryTopicName);
-
-        Sink<Map.Entry<String, String>> machineStatusTopic = KafkaSinks.kafka(kafkaConnectionProps, statusTopicName);
 
         /*
          * We want to be able to process 1000's of events per second, or more.  We don't want to create an instance of
          * ObjectMapper every time we parse or format json. Instead, we use a "Service" to create one instance
          * on each node that will be shared by all processors.  This is done through ServiceFactories like the
-         * 2 declared below.
+         * one declared below.
          */
         ServiceFactory<?, ObjectMapper> jsonParserFactory = ServiceFactories.sharedService((ctx) -> new ObjectMapper());
-        ServiceFactory<?, ObjectMapper> jsonFormatterFactory = ServiceFactories.sharedService((ctx) -> new ObjectMapper());
 
         /*
          * Read events from the telemetry topic.  The key, which will be used to partition the consumers, is
@@ -119,18 +126,18 @@ public class TemperatureMonitorPipelineSolution {
                 pipeline.readFrom(telemetryTopic).withNativeTimestamps(2000).setName("read telemetry events");
 
         /*
-         * Parse the JSON value into a MachineStatusEvent
+         * Parse the JSON value into a MachineEvent
          *
          * INPUT: Map.Entry<String, String>
-         *        The key is the machine serial number and the value is a JSON formatted MachineStatusEvent
+         *        The key is the machine serial number and the value is a JSON formatted MachineEvent
          *
-         * OUTPUT: MachineStatusEvent
+         * OUTPUT: MachineEvent
          *
          * Do not create an ObjectMapper instance every time an event is processed.  Use mapUsingService instead.
          *    See https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStage.html#mapUsingService(com.hazelcast.jet.pipeline.ServiceFactory,com.hazelcast.function.BiFunctionEx)
          */
-        StreamStage<MachineStatusEvent> machineEvents = rawEvents.mapUsingService(jsonParserFactory,
-                        (mapper, event) -> mapper.readValue(event.getValue(), MachineStatusEvent.class))
+        StreamStage<MachineEvent> machineEvents = rawEvents.mapUsingService(jsonParserFactory,
+                        (mapper, event) -> mapper.readValue(event.getValue(), MachineEvent.class))
                 .setName("parse json");
 
 
@@ -138,7 +145,7 @@ public class TemperatureMonitorPipelineSolution {
          * Group the events by serial number. For each serial number, compute the average temperature over a 10s
          * tumbling window.
          *
-         * INPUT: MachineStatusEvent
+         * INPUT: MachineEvent
          *
          * OUTPUT: KeyedWindowResult<String, Double>
          *
@@ -154,10 +161,32 @@ public class TemperatureMonitorPipelineSolution {
          *
          */
         StreamStage<KeyedWindowResult<String, Double>> averageTemps = machineEvents
-                .groupingKey(MachineStatusEvent::getSerialNum)
+                .groupingKey(MachineEvent::getSerialNum)
                 .window(WindowDefinition.tumbling(10000))
-                .aggregate(AggregateOperations.averagingLong(MachineStatusEvent::getBitTemp))
+                .aggregate(AggregateOperations.averagingLong(MachineEvent::getBitTemp))
                 .setName("Average Temp");
+
+
+        /*
+         * Write the averageTemperatures to the "machine_status" map as MachineStatus GenericRecords
+         *
+         * INPUT: KeyedWindowResult<String, Double>
+         *
+         * OUTPUT: None - this is a sink
+         *
+         * Use the Sinks.map variant that takes a map name, a key extractor function and a value extractor function.
+         *    The value extractor needs to build a GenericRecord.  The "machineStatus" method above has been
+         *    provided for this purpose.
+         *
+         * Useful References:
+         *   https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/datamodel/KeyedWindowResult.html
+         *   https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/Sinks.html#map(java.lang.String,com.hazelcast.function.FunctionEx,com.hazelcast.function.FunctionEx)
+         *
+         */
+        averageTemps.writeTo(Sinks.map(Names.MACHINE_STATUS_MAP_NAME,
+                                        KeyedWindowResult::getKey,
+                                        kwr -> machineStatus(kwr.getKey(), kwr.getValue().shortValue())));
+
 
         /*
          * Look up the machine profile for this machine from the machine_profiles map.  Output a
@@ -168,7 +197,7 @@ public class TemperatureMonitorPipelineSolution {
          *        streamStage.getValue() is the averageTemperature over the window.
          *
          * OUTPUT: Tuple4<String, Double, Short, Short>
-         *         The members of the Tuple4 are: serial number, average temp, warning temp, critical temp)
+         *         The members of the Tuple4 are: (serial number, average temp, warning temp, critical temp)
          *         The last 2 values are looked up from the machine_profiles map using the mapUsingIMap method.
          *
          * We would like for the map lookup to be local which means each event needs to be routed to the
@@ -189,12 +218,12 @@ public class TemperatureMonitorPipelineSolution {
          *           ,mapUsingIMap( Names.PROFILE_MAP_NAME, (w, p) -> LAMBDA RETURNING Tuple4)
          *
          * where p is a MachineProfile GenericRecord
-         *       w is the KeyedWindowResult from the previous stage.
+         *       w is the KeyedWindowResult from the averageTemps stage.
          *
          * See:
-         *   "mapUsingIMap" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html
-         *    https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/datamodel/KeyedWindowResult.html
-         *    https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/datamodel/Tuple4.html
+         *   "mapUsingIMap" in https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStageWithKey.html
+         *    https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/datamodel/KeyedWindowResult.html
+         *    https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/datamodel/Tuple4.html
          */
         StreamStage<Tuple4<String, Double, Short, Short>> temperaturesAndLimits =
                 averageTemps.groupingKey(KeyedWindowResult::getKey)
@@ -211,7 +240,7 @@ public class TemperatureMonitorPipelineSolution {
          *
          * See:
          *   the "categorizeTemp" function at the top of this class
-         *   "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStage.html
+         *   "map" in https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStage.html
          */
         StreamStage<Tuple2<String,String>> labels =
                 temperaturesAndLimits.map(tuple -> Tuple2.tuple2(tuple.f0(), categorizeTemp(tuple.f1(), tuple.f2(), tuple.f3())))
@@ -219,7 +248,7 @@ public class TemperatureMonitorPipelineSolution {
 
         /*
          * We  want to write to the output map only if the current color has changed.  This prevents flooding the
-         * map listeners with irrelevant events.  We can use   StreamStageWithKey.filterStateful to do this.
+         * down stream listeners with irrelevant events.  We can use   StreamStageWithKey.filterStateful to do this.
          * The filter will remember the last value for each key.
          *
          * INPUT: Tuple2<String,String>  i.e. (serialNumber, red/orange/green)
@@ -242,7 +271,7 @@ public class TemperatureMonitorPipelineSolution {
          *    object with the new value!
          *
          * See:
-         *    "filterStateful" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/StreamStageWithKey.html
+         *    "filterStateful" in https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStageWithKey.html
          */
         StreamStage<Tuple2<String,String>> changedLabels =
                 labels.groupingKey(Tuple2::f0)
@@ -254,25 +283,45 @@ public class TemperatureMonitorPipelineSolution {
                                 }).setName("Label Changes");
 
         /*
-         * Finally, we can sink the results directly to the "machine_controls" map.  Tuple2<K,V> also implements
-         * Map.Entry<K,V> so we can just supply it directly to the IMap Sink.
+         * Finally, we can write the status out to the machine_controls Kafka topic.  Tuple2<K,V> also implements
+         * Map.Entry<K,V> so we can just supply it directly to the Sink that was declared above.
          *
          * INPUT: Tuple2<String,String>  i.e. (serialNumber, red/orange/green)
          * OUTPUT: None
          *
-         * Create a Sink for the "machine_controls" map using Sinks.map (see reference) then finish the pipeline with
-         * changedLabels.writeTo(machineControlsSink);
+         * Create a Sink for the "machine_controls" topic using  KafkaSinks.kafka (see reference) then finish the
+         * pipeline with writing changedLabels to it.
          *
          * See:
-         *    "map" in https://docs.hazelcast.org/docs/5.2.0/javadoc/index.html?com/hazelcast/jet/pipeline/Sinks.html
+         *    https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/kafka/KafkaSinks.html
          */
-        Sink<Map.Entry<String,String>> sink = Sinks.map(Names.CONTROLS_MAP_NAME);
+        Sink<Map.Entry<String,String>> sink = KafkaSinks.kafka(kafkaConnectionProps, controlsTopicName);
         changedLabels.writeTo(sink);
 
         return pipeline;
     }
+    /*
+     * Three command line arguments are expected, in this order
+     *  KAFKA_BOOTSTRAP_SERVERS
+     *  MACHINE_EVENTS_TOPIC      (the name of the input topic)
+     *  MACHINE_CONTROLS_TOPIC    (the name of the output topic)
+     */
     public static void main(String []args){
-        Pipeline pipeline = createPipeline();
+        if (args.length != 3){
+            throw new RuntimeException("Expected 3 arguments (KAFKA_BOOTSTRAP_SERVERS, MACHINE_EVENTS_TOPIC, MACHINE_CONTROLS_TOPIC) but found " + args.length);
+        }
+
+        Properties props = new Properties();
+        props.setProperty("bootstrap.servers", args[0]);
+        props.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+        Pipeline pipeline = createPipeline(props, args[1], args[2]);
+        /*
+         * We need to preserve order in this pipeline because of the change detection step
+         */
         pipeline.setPreserveOrder(true);
 
         JobConfig jobConfig = new JobConfig();

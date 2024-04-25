@@ -1,12 +1,6 @@
 package hazelcast.platform.labs.machineshop.domain;
 
-import com.hazelcast.nio.serialization.Portable;
-import com.hazelcast.nio.serialization.PortableReader;
-import com.hazelcast.nio.serialization.PortableWriter;
-
-import java.io.IOException;
-
-public class MachineStatusEvent  {
+public class MachineEvent {
     private String serialNum;
     private long eventTime;
     private int bitRPM;
@@ -73,7 +67,7 @@ public class MachineStatusEvent  {
 
     @Override
     public String toString() {
-        return "MachineStatusEvent{" +
+        return "MachineEvent{" +
                 "serialNum='" + serialNum + '\'' +
                 ", timestamp=" + eventTime +
                 ", bitRPM=" + bitRPM +

@@ -21,6 +21,11 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast.solutions</groupId>
+            <artifactId>domain</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast.solutions</groupId>
             <artifactId>common</artifactId>
             <version>${project.version}</version>
         </dependency>

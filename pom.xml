@@ -10,8 +10,8 @@
     <packaging>pom</packaging>
 
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <hazelcast.version>5.4.0</hazelcast.version>
         <snakeyaml.version>2.1</snakeyaml.version>
         <jackson.version>2.15.1</jackson.version>
@@ -32,6 +32,7 @@
     </repositories>
 
     <modules>
+        <module>domain</module>
         <module>common</module>
         <module>refdata-loader</module>
         <module>event-generator</module>
