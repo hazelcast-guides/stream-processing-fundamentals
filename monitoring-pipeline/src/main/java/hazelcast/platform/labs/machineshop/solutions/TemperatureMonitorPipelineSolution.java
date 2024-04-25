@@ -110,13 +110,6 @@ public class TemperatureMonitorPipelineSolution {
         StreamSource<Map.Entry<String, String>> telemetryTopic =
                 KafkaSources.kafka(kafkaConnectionProps, telemetryTopicName);
 
-        /*
-         * We want to be able to process 1000's of events per second, or more.  We don't want to create an instance of
-         * ObjectMapper every time we parse or format json. Instead, we use a "Service" to create one instance
-         * on each node that will be shared by all processors.  This is done through ServiceFactories like the
-         * one declared below.
-         */
-        ServiceFactory<?, ObjectMapper> jsonParserFactory = ServiceFactories.sharedService((ctx) -> new ObjectMapper());
 
         /*
          * Read events from the telemetry topic.  The key, which will be used to partition the consumers, is
@@ -128,14 +121,19 @@ public class TemperatureMonitorPipelineSolution {
         /*
          * Parse the JSON value into a MachineEvent
          *
+         *
+         * We want to be able to process 1000's of events per second, or more.  We don't want to create an instance of
+         * ObjectMapper every time we parse or format json. Instead, we use a "Service" to create one instance
+         * on each node that will be shared by all processors.  This is done via the "mapUsingService" method.
+         * See: https://docs.hazelcast.com/hazelcast/latest/pipelines/transforms#mapusingservice
+         *
          * INPUT: Map.Entry<String, String>
          *        The key is the machine serial number and the value is a JSON formatted MachineEvent
          *
          * OUTPUT: MachineEvent
          *
-         * Do not create an ObjectMapper instance every time an event is processed.  Use mapUsingService instead.
-         *    See https://docs.hazelcast.org/docs/latest/javadoc/com/hazelcast/jet/pipeline/StreamStage.html#mapUsingService(com.hazelcast.jet.pipeline.ServiceFactory,com.hazelcast.function.BiFunctionEx)
          */
+        ServiceFactory<?, ObjectMapper> jsonParserFactory = ServiceFactories.sharedService((ctx) -> new ObjectMapper());
         StreamStage<MachineEvent> machineEvents = rawEvents.mapUsingService(jsonParserFactory,
                         (mapper, event) -> mapper.readValue(event.getValue(), MachineEvent.class))
                 .setName("parse json");
@@ -317,6 +315,7 @@ public class TemperatureMonitorPipelineSolution {
         props.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         props.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.setProperty("auto.offset.reset", "latest");
 
         Pipeline pipeline = createPipeline(props, args[1], args[2]);
         /*

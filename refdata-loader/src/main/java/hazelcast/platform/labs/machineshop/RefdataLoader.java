@@ -55,7 +55,7 @@ public class RefdataLoader {
     private static final List<Profile> profiles = new ArrayList<>();
 
     private static final String STATUS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.MACHINE_STATUS_MAP_NAME + " (" +
-            "serialNum VARCHAR, " +
+            "serialNumber VARCHAR, " +
             "averageBitTemp10s SMALLINT) " +
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +

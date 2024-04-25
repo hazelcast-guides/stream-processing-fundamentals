@@ -24,7 +24,7 @@ image:blueprint.png[schematic]
 == Before You Begin
 You will need the following installed on your system:
 
-* JDK 21 or later
+* JDK 17 or later
 * https://maven.apache.org/download.cgi[Maven 3.8 or later]
 * Your preferred Java IDE (We recommend https://www.jetbrains.com/idea/download/?source=google&medium=cpc&campaign=AMER_en_US-PST+MST_IDEA_Branded&term=intellij+idea&content=602143185985&gad=1&gclid=Cj0KCQiAr8eqBhD3ARIsAIe-buM14qxoPph8ClqF1e4IL-xsv9LLe9w35ts2Q7Pt1uoS6vqc-8K-Cm0aAv1oEALw_wcB&section=mac[IntelliJ IDEA])
 * https://docs.hazelcast.com/clc/latest/install-clc[Hazelcast Command Line Client]
@@ -156,62 +156,90 @@ short bitTemp = newEvent.f1();
 The main method, shown below, is boilerplate that helps with deploying the job to a cluster. You do not need to change this.
 +
 ```java
-    public static void main(String []args){
-        Pipeline pipeline = createPipeline();
+public static void main(String []args){
+        if (args.length != 3){
+            throw new RuntimeException("Expected 3 arguments (KAFKA_BOOTSTRAP_SERVERS, MACHINE_EVENTS_TOPIC, MACHINE_CONTROLS_TOPIC) but found " + args.length);
+        }
+
+        Properties props = new Properties();
+        props.setProperty("bootstrap.servers", args[0]);
+        props.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.setProperty("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.setProperty("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.setProperty("auto.offset.reset", "latest");
+
+        Pipeline pipeline = createPipeline(props, args[1], args[2]);
+        /*
+         * We need to preserve order in this pipeline because of the change detection step
+         */
         pipeline.setPreserveOrder(true);
 
         JobConfig jobConfig = new JobConfig();
         jobConfig.setName("Temperature Monitor");
         HazelcastInstance hz = Hazelcast.bootstrappedInstance();
         hz.getJet().newJob(pipeline, jobConfig);
-    }
+}
 ```
 +
 You will do all of your work in the `createPipeline` method of this job. It always starts with creating a `Pipeline` object.  You then build up the Pipeline by adding stages to it.
 +
 ```java
-   public static Pipeline createPipeline(){
-        Pipeline pipeline = Pipeline.create();
-        // add your stages here
-        return pipeline;
-   }
+public static Pipeline createPipeline(Properties kafkaConnectionProps,
+                                          String telemetryTopicName,
+                                          String controlsTopicName){
+    Pipeline pipeline = Pipeline.create();
+
+    // add your stages here
+
+    return pipeline;
+}
 ```
 +
 [NOTE] 
 
-We use the Shade plugin to bundle all project dependencies, other than Hazelcast, into a single jar. The Hazelcast classes should not be included because they are already on the server. Code with `com.hazelcast` package names cannot be deployed to a Hazelcast Cloud cluster.
+We use the Shade plugin to bundle all project dependencies, other than Hazelcast, into a single jar. The Hazelcast classes should not be included because they are already on the server. Also, code with `com.hazelcast` package names cannot be deployed to the server.
 +
 Currently, the `createPipeline` method contains only a source (reading from the `machine_events` map) and a sink, which simply logs the events to the console.  This can be useful during debugging. In the next step, you'll make a small change to the Pipeline and walk through a typical code/test cycle.
 
-. Make a small change to the output format in the *writeTo* statement just so we can walk through building and deploying a pipeline.  After you've made the change, you can deploy the pipeline using the commands below.
+. If you wish, make a small change to the output format in the *writeTo* statement just so we can walk through building and deploying a pipeline.  After you've made the change, you can deploy the pipeline using the commands below.
 +
 ```shell
+# build and package the pipeline
 cd monitoring-pipeline
 mvn package
 cd ..
-# use the submission script, passing the name of the cluster you want to run the job
-./clc-scripts/submitjob.sh Docker
+
+# submit the job
+clc -c Docker job submit  --class=hazelcast.platform.labs.machineshop.TemperatureMonitorPipeline monitoring-pipeline/target/monitoring-pipeline-1.0-SNAPSHOT.jar redpanda:9092 machine_events machine_controls
+
 # look for the logging statements in the Hazelcast logs
-docker compose logs --follow hz
+docker compose logs --follow hz1 hz2
 Ctrl-C
 ```
 +
-You should see something like this in the Hazelcast cluster member log:
+You should see something like this in the Hazelcast cluster member logs:
 ```shell
-stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,357 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=HYV569
-stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,370 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=FXQ058
-stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,591 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=RUO239
-stream-processing-fundamentals-hz-1  | 2023-02-01 21:11:44,640 [ INFO] [hz.hungry_lehmann.jet.blocking.thread-0] [c.h.j.i.c.WriteLoggerP]: [172.19.0.5]:5701 [dev] [5.2.1] [temp_monitor_161114/loggerSink#0] New Event SN=DYQ714
+stream-processing-fundamentals-hz1-1  | 2024-04-25 17:57:10,410 [ INFO] [hz.competent_sanderson.jet.blocking.thread-4] [c.h.j.i.c.WriteLoggerP]: [172.26.0.5]:5701 [dev] [5.4.0] [Temperature Monitor/loggerSink#0] Received event for EBJ194
+stream-processing-fundamentals-hz1-1  | 2024-04-25 17:57:10,438 [ INFO] [hz.competent_sanderson.jet.blocking.thread-4] [c.h.j.i.c.WriteLoggerP]: [172.26.0.5]:5701 [dev] [5.4.0] [Temperature Monitor/loggerSink#0] Received event for BWL505
+stream-processing-fundamentals-hz2-1  | 2024-04-25 17:57:10,472 [ INFO] [hz.jolly_moser.jet.blocking.thread-4] [c.h.j.i.c.WriteLoggerP]: [172.26.0.2]:5701 [dev] [5.4.0] [Temperature Monitor/loggerSink#1] Received event for FKR936
+stream-processing-fundamentals-hz2-1  | 2024-04-25 17:57:10,569 [ INFO] [hz.jolly_moser.jet.blocking.thread-4] [c.h.j.i.c.WriteLoggerP]: [172.26.0.2]:5701 [dev] [5.4.0] [Temperature Monitor/loggerSink#1] Received event for GBQ070
 ```
 
-. Inspect the running job using Management Center or CLC
 
-. Cancel the job. The Hazelcast cluster will remain up and events will continue to flow. 
-```shell
-./clc-scripts/canceljob.sh Docker
-```
+. When you are done, you can cancel the job using the CLC. The Hazelcast cluster and Kafka broker will remain up and events will continue to be written to the `machine_events` topic.
 +
-image:firstjob.png[first job]
+```shell
+% clc -c Docker job list
+ Job ID              | Name                | Status  | Submitted           | Completed
+ 0b99-d896-1c00-0002 | Temperature Monitor | RUNNING | 2024-04-25 13:56:34 | -
+
+    OK Returned 1 row(s).
+
+% clc -c docker job cancel  0b99-d896-1c00-0002
+    OK [1/2] Connected to the cluster.
+    OK [2/2] Started cancellation of '0b99-d896-1c00-0002'.
+```
 
 . Pat yourself on the back! You've deployed your first pipeline.
 
@@ -222,95 +250,20 @@ You may want to deploy and cancel the job multiple times while you are building 
 
 image:jobdone.png[job done]
 
-You can also see machine control events in the `event_generator` log.
+If it did not work right away, there are a couple of things you can inspect to
+help you diagnose and correct the problem.
 
-```shell
-docker compose logs --follow event_generator
-```
+- use the Kafka UI to
+Browse the "machine_control" Kafka topic to verify that control messages are being sent by your Pipeline.
+- Using Management Center or CLC to query the `machine_status` map.  This map
+drives the UI and should be receiving updates regularly.
+
 
 NOTE: If at any point you get stuck, you can refer to the solution which you will find in the
 *hazelcast.platform.labs.machineshop.solutions* package.
 
-== Step 6: Deploy to Hazelcast Cloud
 
-In this step, you will deploy your temperature monitoring Pipeline to a Hazelcast Cloud cluster. You will also connect the cloud cluster to the UI, refdata loader and event_generator.
-
-. If you haven't already done so, navigate to https://cloud.hazelcast.com, create an account, and create a new "Production" cluster.  This will deploy a 3 node cluster.  
-
-. After the cluster is deployed, go to the CLI section of the "Quick Connection Guide" as shown below. Follow steps 2  and 3 to set up CLC for your cloud cluster. 
-+
-image:viridian-clc-config.png[viridian-clc-config]
-
-. The previous step should have given output similar to the following:
-+
-```
-rmay@HZLCST-MBP-42 stream-processing-fundamentals % clc -c pr-tgouvd9r
-Hazelcast CLC v5.3.5 (c) 2023 Hazelcast Inc.
-
-* Participate in our survey at: https://forms.gle/rPFywdQjvib1QCe49
-* Type 'help' for help information. Prefix non-SQL commands with \
-
-Configuration : /Users/me/.hazelcast/configs/pr-tgouvd9r/config.yaml
-Log      INFO : /Users/me/.hazelcast/logs/2023-11-27.log
-```
-We will need to tell Docker where to find the configuration files for your cluster.  In the above output, the configuration files for this cluster are  in the `$HOME/.hazelcast/configs/pr-tgouvd9r` directory.
-+
-In the shell or Windows command line where you will run your Docker commands, set the `VIRIDIAN_SECRETS_DIR` environment variable to the configuration directory.  See below for an example.  Be sure to use your Viridian cluster name.
-+
-```
-export VIRIDIAN_SECRETS_DIR=$HOME/.hazelcast/configs/pr-tgouvd9r
-```
-+
-. Start the refdata_loader, event_generator and ui using the viridian.compose setup. This pulls the environment variables you just set and allows the local Docker instances to talk to your Viridian cluster. 
-+
-```shell
-docker compose -f viridian.compose.yaml up -d
-```
-
-. View the logs.
-+
-```shell
-docker compose -f viridian.compose.yaml logs --follow
-```
-
-. Use Management Center via the Viridian console to verify that your cluster is receiving traffic.  
-
-. Submit your job using the same script as before.  This time you will need to pass in the name of your cluster.  Use `clc config list` to see a list of known clusters.  An example is shown below.
-+
-```shell
-clc-scripts % clc config list
- Configuration Name
- Docker
- dea-test
- pr-tgouvd9r  << Suppose you want to use this one
-
-./clc-scripts/sumbit-job.sh pr-tgouvd9r
-```
-. Verify that the job is running using Management Center via the Viridian console. Look under _Stream Processing > Jobs_.
-
-. We'll use CLC to view the logs from the Viridian cluster. First, you'll need to set up the API key and secret strings. In the Viridian console, go to _Account > Developer_ and set the API key. Do not navigate away from this screen.
-
-. In your terminal window, open the CLC command line, specifying the name of your cluster. An example of the command is below.
-+
-```shell
-clc -c pr-tgouvd9r
-```
-
-. At the CLC prompt, log in to your cluster. Enter the API key and secret when prompted.
-+
-```shell
-\viridian login
-```
-
-. At the CLC prompt, view the logs for your cluster. You will need to specify the name of your cluster. An example is shown below. The output will be similar to the output you saw at the end of Step 4 above.
-+
-```shell
-\viridian stream-logs EdSrvs
-```
-
-
-== Congratulations!
-
+== Congratulations on Completing the Stream Processing Fundamentals Lab!
 
 [NOTE]
 This project contains many useful helpers.  Please feel free to study it and use it as a template for your own projects.

@@ -6,6 +6,6 @@
 - [x] Incorporate Red Panda and an event queue ?
 - [ ] Update event generator to listen on K topic
 - [x] Reimplement pipeline solution
-- [ ] Reimplement pipeline skeleton
+- [x] Reimplement pipeline skeleton
 - [ ] Re-route the UI to use the machine_aggregates map
 - [ ] Update the documentation
