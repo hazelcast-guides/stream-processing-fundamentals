@@ -26,44 +26,29 @@ import viridian
 
 # Object Definitions
 
-class MachineStatusEvent(Portable):
-    ID = 2
+class MachineStatus(Portable):
+    ID = 3
 
     def __init__(self):
-        self.serial_num = ""
-        self.event_time = 0
-        self.bit_rpm = 0
-        self.bit_temp = 0
-        self.bit_position_x = 0
-        self.bit_position_y = 0
-        self.bit_position_z = 0
+        self.serial_number = ""
+        self.average_bit_temp_10s = 0
 
     def write_portable(self, writer: PortableWriter) -> None:
-        writer.write_string("serialNum", self.serial_num)
-        writer.write_long("eventTime", self.event_time)
-        writer.write_int("bitRPM", self.bit_rpm)
-        writer.write_short("bitTemp", self.bit_temp)
-        writer.write_int("bitPositionX", self.bit_position_x)
-        writer.write_int("bitPositionY", self.bit_position_y)
-        writer.write_int("bitPositionZ", self.bit_position_z)
+        writer.write_string("serialNumber", self.serial_num)
+        writer.write_long("averageBitTemp10s", self.event_time)
 
     def read_portable(self, reader: PortableReader) -> None:
-        self.serial_num = reader.read_string("serialNum")
-        self.event_time = reader.read_long("eventTime")
-        self.bit_rpm = reader.read_int("bitRPM")
-        self.bit_temp = reader.read_short("bitTemp")
-        self.bit_position_x = reader.read_int("bitPositionX")
-        self.bit_position_y = reader.read_int("bitPositionY")
-        self.bit_position_z = reader.read_int("bitPositionZ")
+        self.serial_num = reader.read_string("serialNumber")
+        self.average_bit_temp_10s = reader.read_short("averageBitTemp10s")
 
     def get_factory_id(self) -> int:
         return 1
 
     def get_class_id(self) -> int:
-        return MachineStatusEvent.ID
+        return MachineStatus.ID
 
 
-portable_factory = {MachineStatusEvent.ID: MachineStatusEvent}
+portable_factory = {MachineStatus.ID: MachineStatus}
 
 
 def get_required_env(name: str) -> str:
@@ -84,10 +69,10 @@ def wait_map_listener_fun(expected_val: str, done: threading.Event):
 
 
 def logging_entry_listener(entry: EntryEvent):
-    print(f'GOT {entry.key}: {entry.value.bit_temp}', flush=True)
+    print(f'GOT {entry.key}: {entry.value.average_bit_temp_10s}', flush=True)
 
 
-def collecting_entry_listener(entry: EntryEvent[str, MachineStatusEvent]):
+def collecting_entry_listener(entry: EntryEvent[str, MachineStatus]):
     global data_bucket
     data_bucket.add(entry.key, entry.value.bit_temp, entry.value.event_time)
 
