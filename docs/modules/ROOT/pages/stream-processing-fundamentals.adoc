@@ -5,7 +5,7 @@
 :page-categories: Stream Processing
 :page-lang: sql 
 :page-enterprise: 
-:page-est-time: 30 mins 
+:page-est-time: 150 mins
 :description: Use the Hazelcast Pipeline API to build an application for modifying machine shop operations based on real time telemetry. 
 
 {description}

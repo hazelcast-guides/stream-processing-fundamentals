@@ -1,34 +1,32 @@
 import threading
 import pandas as pd
+import numpy as np
 
 
 class Bucket:
-
-    # contents of the dict:
-    # {
-    #   "colname" : ( [templist], [timestamplist])
-    # }
-    #
-
     def __init__(self):
         self.lock = threading.Lock()
-        self.data = dict()
+        self.serial_numbers = []
+        self.average_bit_temp_10ss = []
+        self.event_times = []
 
-    def add(self, sn: str, temp: int, event_epoch_time: int):
+    def add(self, sn: str, temp: int, timestamp: np.datetime64):
         with self.lock:
-            temps, times = self.data.setdefault(sn, ([], []))
-            temps.append(temp)
-
-            # this rounding to the nearest second on purpose to
-            # help the data align better
-            times.append(pd.to_datetime(int(event_epoch_time/1000), unit='s'))
+            self.serial_numbers.append(sn)
+            self.average_bit_temp_10ss.append(temp)
+            self.event_times.append(timestamp)
 
     def harvest(self) -> pd.DataFrame:
         with self.lock:
-            new_data = dict()
-            for k, v in self.data.items():
-                new_data[k] = pd.Series(v[0], index=v[1])
+            t = np.datetime64(0, 'ms')
+            result = pd.DataFrame({
+                'serial_number': pd.Series(self.serial_numbers, dtype=str),
+                'average_bit_temp_10s': pd.Series(self.average_bit_temp_10ss, dtype=int),
+                'event_time': pd.Series(self.event_times, dtype=t.dtype)
+            })
 
-            new_df = pd.DataFrame(new_data)
-            self.data.clear()
-            return new_df
+            self.serial_numbers = []
+            self.average_bit_temp_10ss = []
+            self.event_times = []
+
+            return result

@@ -60,10 +60,11 @@ public class TemperatureMonitorPipelineSolution {
         return result;
     }
 
-    public static GenericRecord machineStatus(String serialNum, short averageBitTemp10s){
+    public static GenericRecord machineStatus(String serialNum, short averageBitTemp10s, long timestamp){
         return GenericRecordBuilder.portable(PortableHelper.MACHINE_STATUS_CLASS_DEFINITION)
                 .setString("serialNumber", serialNum)
                 .setInt16("averageBitTemp10s", averageBitTemp10s)
+                .setInt64("eventTime", timestamp)
                 .build();
     }
 
@@ -183,7 +184,7 @@ public class TemperatureMonitorPipelineSolution {
          */
         averageTemps.writeTo(Sinks.map(Names.MACHINE_STATUS_MAP_NAME,
                                         KeyedWindowResult::getKey,
-                                        kwr -> machineStatus(kwr.getKey(), kwr.getValue().shortValue())));
+                                        kwr -> machineStatus(kwr.getKey(), kwr.getValue().shortValue(), kwr.end())));
 
 
         /*

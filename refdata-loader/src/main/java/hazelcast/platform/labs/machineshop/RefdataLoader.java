@@ -56,7 +56,8 @@ public class RefdataLoader {
 
     private static final String STATUS_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.MACHINE_STATUS_MAP_NAME + " (" +
             "serialNumber VARCHAR, " +
-            "averageBitTemp10s SMALLINT) " +
+            "averageBitTemp10s SMALLINT, " +
+            "eventTime BIGINT) " +
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +

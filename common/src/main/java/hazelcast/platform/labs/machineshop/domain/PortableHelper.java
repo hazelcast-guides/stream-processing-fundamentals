@@ -16,6 +16,7 @@ public class PortableHelper {
             new ClassDefinitionBuilder(MACHINE_SHOP_PORTABLE_FACTORY_ID, MACHINE_STATUS_ID)
                     .addStringField("serialNumber")
                     .addShortField("averageBitTemp10s")
+                    .addLongField("eventTime")
                     .build();
 
 

@@ -7,6 +7,8 @@ import hazelcast
 from dash import Dash, html, dcc
 from dash.dependencies import Input, Output
 import pandas as pd
+import numpy as np
+import plotly.express as px
 from hazelcast import HazelcastClient
 from hazelcast.config import ReconnectMode
 from hazelcast.proxy.base import EntryEvent
@@ -32,14 +34,19 @@ class MachineStatus(Portable):
     def __init__(self):
         self.serial_number = ""
         self.average_bit_temp_10s = 0
+        self.event_time = np.datetime64(0, 'ms')
 
     def write_portable(self, writer: PortableWriter) -> None:
-        writer.write_string("serialNumber", self.serial_num)
-        writer.write_long("averageBitTemp10s", self.event_time)
+        writer.write_string("serialNumber", self.serial_number)
+        writer.write_short("averageBitTemp10s", self.average_bit_temp_10s)
+
+        # converting from datetime64 to unix millis since the epoch
+        writer.write_long("eventTime", (self.event_time - np.datetime64(0, 'ms')) / np.timedelta(1, 'ms'))
 
     def read_portable(self, reader: PortableReader) -> None:
-        self.serial_num = reader.read_string("serialNumber")
+        self.serial_number = reader.read_string("serialNumber")
         self.average_bit_temp_10s = reader.read_short("averageBitTemp10s")
+        self.event_time = np.datetime64(reader.read_long("eventTime"), 'ms')
 
     def get_factory_id(self) -> int:
         return 1
@@ -74,7 +81,7 @@ def logging_entry_listener(entry: EntryEvent):
 
 def collecting_entry_listener(entry: EntryEvent[str, MachineStatus]):
     global data_bucket
-    data_bucket.add(entry.key, entry.value.bit_temp, entry.value.event_time)
+    data_bucket.add(entry.value.serial_number, entry.value.average_bit_temp_10s, entry.value.event_time)
 
 
 def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: float) -> bool:
@@ -93,12 +100,33 @@ def wait_for(imap: BlockingMap, expected_key: str, expected_val: str, timeout: f
     return done.wait(timeout)
 
 
+def empty_df() -> pd.DataFrame:
+    t = np.datetime64(0, 'ms')
+    newdf = pd.DataFrame({
+        'serial_number': pd.Series([], dtype=str),
+        'average_bit_temp_10s': pd.Series([], dtype=int),
+        'event_time': pd.Series([], dtype=t.dtype)
+    })
+    return newdf
+
+
+def graph(dataframe):
+    return px.line(dataframe,
+                   x='event_time',
+                   y='average_bit_temp_10s',
+                   color='serial_number',
+                   labels = {
+                       'event_time': 'time',
+                       'average_bit_temp_10s': 'average bit temp (rolling 10s window)',
+                       'serial_number': 'serial number'
+                   })
+
 # global state
 data_bucket = bucket.Bucket()
 app = Dash(__name__, external_stylesheets=['https://fonts.googleapis.com/css?family=Raleway:400,300,600'])
 pd.options.plotting.backend = "plotly"
-df = pd.DataFrame()
-fig = df.plot(template='seaborn')
+df = empty_df()
+fig = graph(df)
 query_listener_id = None
 
 
@@ -106,12 +134,10 @@ query_listener_id = None
 def update(n: int):
     global df
     newdf = data_bucket.harvest()
-    # print(newdf)
-    df = pd.concat([df, newdf])
+    if newdf.shape[0] > 0:
+        df = pd.concat([df, newdf])
 
-    # crucial because the time series don't align , without this there are gaps in the lines
-    df.interpolate(inplace=True)
-    return df.plot(template='seaborn')  # seaborn, plotly_dark
+    return graph(df)
 
 
 @app.callback(Output('matching_sns', 'children'), Input('location_input', 'value'), Input('block_input', 'value'))
@@ -124,7 +150,7 @@ def requery(location: str, block: str):
     if query_listener_id is not None and event_map is not None:
         event_map.remove_entry_listener(query_listener_id)
 
-    df = pd.DataFrame()
+    df = empty_df()
     data_bucket = bucket.Bucket()
 
     selected_serial_nums = hz.sql.execute(
@@ -133,23 +159,22 @@ def requery(location: str, block: str):
            block = '{block}' """
     ).result()
 
-    sn_list = "','".join([r["serialNum"] for r in selected_serial_nums])
+    sn_list = "','".join([row["serialNum"] for row in selected_serial_nums])
     if len(sn_list) > 0:
-        query = f"serialNum in ('{sn_list}')"
+        query = f"serialNumber in ('{sn_list}')"
         print(f'adding entry listener WHERE {query}', flush=True)
         query_listener_id = event_map.add_entry_listener(
             include_value=True,
             predicate=hazelcast.predicate.sql(query),
             added_func=collecting_entry_listener,
             updated_func=collecting_entry_listener)
-        print("Listener added", flush=True)
 
     serial_num_count = sn_list.count(",") + 1 if len(sn_list) > 0 else 0
     return str(f'Matching Serial Numbers: {serial_num_count}')
 
 
 app.layout = html.Div(children=[
-    html.Img(src='assets/hazelcast-logo.png', className="centered-image", style={'width':'25%'}),
+    html.Img(src='assets/hazelcast-logo.png', className="centered-image", style={'width': '25%'}),
     html.H2(children='Machine Shop Monitor'),
     dcc.Graph(
         id='main-graph',
@@ -158,7 +183,7 @@ app.layout = html.Div(children=[
     html.Label(children="Location", htmlFor='location_input'),
     dcc.Input(id='location_input', value='San Antonio', type='text', debounce=True),
     html.Label(children="Block", htmlFor='block_input'),
-    dcc.Input(id='block_input', value='A',  type='text', debounce=True),
+    dcc.Input(id='block_input', value='A', type='text', debounce=True),
     html.Div(id='matching_sns', children=""),
     dcc.Interval(id="timer", interval=2500, n_intervals=0)
 ], className='container')
@@ -186,7 +211,7 @@ if __name__ == '__main__':
 
     print('Connected to Hazelcast', flush=True)
     machine_controls_map = hz.get_map('machine_controls').blocking()
-    event_map = hz.get_map('machine_events').blocking()
+    event_map = hz.get_map('machine_status').blocking()
     system_activities_map = hz.get_map('system_activities').blocking()
     wait_for(system_activities_map, 'LOADER_STATUS', 'FINISHED', 3 * 60 * 1000)
     print("The loader has finished, proceeding", flush=True)
