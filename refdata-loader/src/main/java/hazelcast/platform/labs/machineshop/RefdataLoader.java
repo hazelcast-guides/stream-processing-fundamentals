@@ -206,33 +206,38 @@ public class RefdataLoader {
         IMap<String, MachineProfile> machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
         IMap<String, String> systemActivitiesMap = hzClient.getMap(Names.SYSTEM_ACTIVITIES_MAP_NAME);
 
-        systemActivitiesMap.put("LOADER_STATUS","STARTED");
+        String currentStatus = systemActivitiesMap.get("LOADER_STATUS");
+        if (currentStatus == null) {
+            systemActivitiesMap.put("LOADER_STATUS", "STARTED");
 
-        int existingEntries = machineProfileMap.size();
-        int toLoad = machineCount - existingEntries;
+            int existingEntries = machineProfileMap.size();
+            int toLoad = machineCount - existingEntries;
 
-        if (toLoad <= 0){
-            System.out.println("" + existingEntries + " machine profiles are already present");
-        } else {
-            for(int i=0; i < toLoad; ++i){
-                Profile p = profiles.get( i % profiles.size());
-                MachineProfile mp = MachineProfile.fake(p.location, p.block, p.faultyPercentage);
-                batch.put(mp.getSerialNum(), mp);
-                int BATCH_SIZE = 1000;
-                if (batch.size() == BATCH_SIZE){
-                    machineProfileMap.putAll(batch);
-                    batch.clear();
+            if (toLoad <= 0) {
+                System.out.println("" + existingEntries + " machine profiles are already present");
+            } else {
+                for (int i = 0; i < toLoad; ++i) {
+                    Profile p = profiles.get(i % profiles.size());
+                    MachineProfile mp = MachineProfile.fake(p.location, p.block, p.faultyPercentage);
+                    batch.put(mp.getSerialNum(), mp);
+                    int BATCH_SIZE = 1000;
+                    if (batch.size() == BATCH_SIZE) {
+                        machineProfileMap.putAll(batch);
+                        batch.clear();
+                    }
                 }
+
+                if (batch.size() > 0) machineProfileMap.putAll(batch);
+
+                if (machineCount == toLoad)
+                    System.out.println("Loaded " + machineCount + " machine profiles");
+                else
+                    System.out.println("Loaded " + toLoad + " machine profiles bringing the total to " + machineCount);
             }
-
-            if (batch.size() > 0) machineProfileMap.putAll(batch);
-
-            if (machineCount == toLoad)
-                System.out.println("Loaded " + machineCount + " machine profiles");
-            else
-                System.out.println("Loaded " + toLoad + " machine profiles bringing the total to " + machineCount);
+            systemActivitiesMap.put("LOADER_STATUS", "FINISHED");
+        } else {
+            System.out.println("Exiting because the current LOADER_STATUS is " + currentStatus);
         }
-        systemActivitiesMap.put("LOADER_STATUS","FINISHED");
         hzClient.shutdown();
     }
 
