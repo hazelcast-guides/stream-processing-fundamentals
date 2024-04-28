@@ -1,10 +1,6 @@
 package hazelcast.platform.labs.machineshop.domain;
 
-import com.hazelcast.nio.serialization.*;
-
-import java.io.IOException;
-
-public class MachineStatus implements Portable {
+public class MachineStatus  {
     private String serialNumber;
     private short  averageBitTemp10s;
     private long eventTime;
@@ -40,29 +36,5 @@ public class MachineStatus implements Portable {
                 ", averageBitTemp10s=" + averageBitTemp10s +
                 ", eventTime=" + eventTime +
                 '}';
-    }
-
-    @Override
-    public int getFactoryId() {
-        return PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID;
-    }
-
-    @Override
-    public int getClassId() {
-        return PortableHelper.MACHINE_STATUS_ID;
-    }
-
-    @Override
-    public void writePortable(PortableWriter portableWriter) throws IOException {
-        portableWriter.writeString("serialNumber", serialNumber);
-        portableWriter.writeShort("averageBitTemp10s", averageBitTemp10s);
-        portableWriter.writeLong("eventTime", eventTime);
-    }
-
-    @Override
-    public void readPortable(PortableReader portableReader) throws IOException {
-        this.serialNumber = portableReader.readString("serialNumber");
-        this.averageBitTemp10s = portableReader.readShort("averageBitTemp10s");
-        this.eventTime = portableReader.readLong("eventTime");
     }
 }

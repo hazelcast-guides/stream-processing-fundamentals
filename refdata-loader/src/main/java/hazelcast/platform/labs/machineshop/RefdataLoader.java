@@ -61,9 +61,8 @@ public class RefdataLoader {
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
-            "'valueFormat' = 'portable'," +
-            "'valuePortableFactoryId' = '"+ PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID +"'," +
-            "'valuePortableClassId' = '"+ PortableHelper.MACHINE_STATUS_ID  +"')";
+            "'valueFormat' = 'compact'," +
+            "'valueCompactTypeName' = '" + Names.MACHINE_STATUS_TYPE_NAME + "')";
 
     private static final String PROFILE_MAPPING_SQL = "CREATE OR REPLACE MAPPING " + Names.PROFILE_MAP_NAME + " (" +
             "serialNum VARCHAR, " +
@@ -77,9 +76,8 @@ public class RefdataLoader {
             "TYPE IMap OPTIONS (" +
             "'keyFormat' = 'java'," +
             "'keyJavaClass' = 'java.lang.String'," +
-            "'valueFormat' = 'portable'," +
-            "'valuePortableFactoryId' = '"+ PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID  +"'," +
-            "'valuePortableClassId' = '"+ PortableHelper.MACHINE_PROFILE_ID  +"')";
+            "'valueFormat' = 'compact'," +
+            "'valueCompactTypeName' = '" + Names.MACHINE_PROFILE_TYPE_NAME + "')";
     private static final String SYSTEM_ACTIVITIES_MAPPING_SQL = "CREATE OR REPLACE MAPPING " +
             Names.SYSTEM_ACTIVITIES_MAP_NAME +
             " TYPE IMap OPTIONS (" +
@@ -192,8 +190,6 @@ public class RefdataLoader {
         }
         clientConfig.getConnectionStrategyConfig().setAsyncStart(false);
         clientConfig.getConnectionStrategyConfig().setReconnectMode(ClientConnectionStrategyConfig.ReconnectMode.ON);
-        clientConfig.getSerializationConfig().getPortableFactories()
-            .put(PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID, new MachineShopPortableFactory());
 
         HazelcastInstance hzClient = HazelcastClient.newHazelcastClient(clientConfig);
 

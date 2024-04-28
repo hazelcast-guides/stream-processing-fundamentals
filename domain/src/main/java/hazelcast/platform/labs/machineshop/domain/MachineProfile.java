@@ -1,14 +1,9 @@
 package hazelcast.platform.labs.machineshop.domain;
 
-import com.hazelcast.nio.serialization.Portable;
-import com.hazelcast.nio.serialization.PortableReader;
-import com.hazelcast.nio.serialization.PortableWriter;
-
-import java.io.IOException;
 import java.util.Random;
 
 
-public class MachineProfile implements Portable {
+public class MachineProfile  {
     private String serialNum;
     private String location;
 
@@ -130,38 +125,4 @@ public class MachineProfile implements Portable {
         return result;
     }
 
-
-    @Override
-    public int getFactoryId() {
-        return PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID;
-    }
-
-    @Override
-    public int getClassId() {
-        return PortableHelper.MACHINE_PROFILE_ID;
-    }
-
-    @Override
-    public void writePortable(PortableWriter writer) throws IOException {
-        writer.writeString("serialNum", this.serialNum);
-        writer.writeString("location", this.location);
-        writer.writeString("block", this.block);
-        writer.writeFloat("faultyOdds", this.faultyOdds);
-        writer.writeString("manufacturer", this.manufacturer);
-        writer.writeShort("warningTemp", this.warningTemp);
-        writer.writeShort("criticalTemp", this.criticalTemp);
-        writer.writeInt("maxRPM", this.maxRPM);
-    }
-
-    @Override
-    public void readPortable(PortableReader reader) throws IOException {
-        this.serialNum = reader.readString("serialNum");
-        this.location = reader.readString("location");
-        this.block = reader.readString("block");
-        this.faultyOdds = reader.readFloat("faultyOdds");
-        this.manufacturer = reader.readString("manufacturer");
-        this.warningTemp = reader.readShort("warningTemp");
-        this.criticalTemp = reader.readShort("criticalTemp");
-        this.maxRPM = reader.readInt("maxRPM");
-    }
 }

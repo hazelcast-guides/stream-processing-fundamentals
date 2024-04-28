@@ -16,6 +16,9 @@ public class Names {
 
     public static final String MACHINE_STATUS_MAP_NAME = "machine_status";
 
+    public static final String MACHINE_PROFILE_TYPE_NAME = "hazelcast.platform.labs.machineshop.domain.MachineProfile";
+    public static final String MACHINE_STATUS_TYPE_NAME = "hazelcast.platform.labs.machineshop.domain.MachineStatus";
+
     /*
      * This method, though not currently used, could be used to configure a cloud instance of Hazelcast
      * where the initial configuration is not under the user's control

@@ -3,19 +3,16 @@ package hazelcast.platform.labs.machineshop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.jet.aggregate.AggregateOperations;
 import com.hazelcast.jet.config.JobConfig;
 import com.hazelcast.jet.datamodel.KeyedWindowResult;
 import com.hazelcast.jet.datamodel.Tuple2;
 import com.hazelcast.jet.datamodel.Tuple4;
-import com.hazelcast.jet.kafka.KafkaSinks;
 import com.hazelcast.jet.kafka.KafkaSources;
 import com.hazelcast.jet.pipeline.*;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecordBuilder;
 import hazelcast.platform.labs.machineshop.domain.MachineEvent;
 import hazelcast.platform.labs.machineshop.domain.Names;
-import hazelcast.platform.labs.machineshop.domain.PortableHelper;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -61,7 +58,7 @@ public class TemperatureMonitorPipeline {
     }
 
     public static GenericRecord machineStatus(String serialNum, short averageBitTemp10s, long timestamp){
-        return GenericRecordBuilder.portable(PortableHelper.MACHINE_STATUS_CLASS_DEFINITION)
+        return GenericRecordBuilder.compact(Names.MACHINE_STATUS_TYPE_NAME)
                 .setString("serialNumber", serialNum)
                 .setInt16("averageBitTemp10s", averageBitTemp10s)
                 .setInt64("eventTime", timestamp)

@@ -6,9 +6,7 @@ import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import hazelcast.platform.labs.MapWaiter;
 import hazelcast.platform.labs.machineshop.domain.MachineProfile;
-import hazelcast.platform.labs.machineshop.domain.MachineShopPortableFactory;
 import hazelcast.platform.labs.machineshop.domain.Names;
-import hazelcast.platform.labs.machineshop.domain.PortableHelper;
 import hazelcast.platform.labs.viridian.ViridianConnection;
 import org.apache.kafka.clients.admin.*;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -120,14 +118,9 @@ public class EventGenerator {
             for (String server : hzServers) clientConfig.getNetworkConfig().addAddress(server);
         }
 
-        // configure portable serialization
-        clientConfig.getSerializationConfig().getPortableFactories().
-                put(PortableHelper.MACHINE_SHOP_PORTABLE_FACTORY_ID, new MachineShopPortableFactory());
-
         hzClient = HazelcastClient.newHazelcastClient(clientConfig);
         machineProfileMap = hzClient.getMap(Names.PROFILE_MAP_NAME);
         systemActivitiesMap = hzClient.getMap(Names.SYSTEM_ACTIVITIES_MAP_NAME);
-
 
         Runtime.getRuntime().addShutdownHook(new Thread(hzClient::shutdown));
     }

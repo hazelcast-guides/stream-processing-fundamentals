@@ -15,7 +15,6 @@ import com.hazelcast.nio.serialization.genericrecord.GenericRecord;
 import com.hazelcast.nio.serialization.genericrecord.GenericRecordBuilder;
 import hazelcast.platform.labs.machineshop.domain.MachineEvent;
 import hazelcast.platform.labs.machineshop.domain.Names;
-import hazelcast.platform.labs.machineshop.domain.PortableHelper;
 
 import java.io.Serializable;
 import java.util.Map;
@@ -61,7 +60,7 @@ public class TemperatureMonitorPipelineSolution {
     }
 
     public static GenericRecord machineStatus(String serialNum, short averageBitTemp10s, long timestamp){
-        return GenericRecordBuilder.portable(PortableHelper.MACHINE_STATUS_CLASS_DEFINITION)
+        return GenericRecordBuilder.compact(Names.MACHINE_STATUS_TYPE_NAME)
                 .setString("serialNumber", serialNum)
                 .setInt16("averageBitTemp10s", averageBitTemp10s)
                 .setInt64("eventTime", timestamp)

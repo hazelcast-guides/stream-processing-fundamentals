@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import threading
+import typing
 
 import hazelcast
 from dash import Dash, html, dcc
@@ -13,7 +14,7 @@ from hazelcast import HazelcastClient
 from hazelcast.config import ReconnectMode
 from hazelcast.proxy.base import EntryEvent
 from hazelcast.proxy.map import BlockingMap
-from hazelcast.serialization.api import Portable, PortableWriter, PortableReader
+from hazelcast.serialization.api import CompactSerializer, CompactReader, CompactWriter
 
 import bucket
 import viridian
@@ -28,34 +29,33 @@ import viridian
 
 # Object Definitions
 
-class MachineStatus(Portable):
-    ID = 3
-
+class MachineStatus:
     def __init__(self):
         self.serial_number = ""
         self.average_bit_temp_10s = 0
         self.event_time = np.datetime64(0, 'ms')
 
-    def write_portable(self, writer: PortableWriter) -> None:
-        writer.write_string("serialNumber", self.serial_number)
-        writer.write_short("averageBitTemp10s", self.average_bit_temp_10s)
+
+class MachineStatusSerializer(CompactSerializer[MachineStatus]):
+    def write(self, writer: CompactWriter, obj: MachineStatus) -> None:
+        writer.write_string("serialNumber", obj.serial_number)
+        writer.write_int16("averageBitTemp10s", obj.average_bit_temp_10s)
 
         # converting from datetime64 to unix millis since the epoch
-        writer.write_long("eventTime", (self.event_time - np.datetime64(0, 'ms')) / np.timedelta(1, 'ms'))
+        writer.write_int64("eventTime", (obj.event_time - np.datetime64(0, 'ms')) / np.timedelta(1, 'ms'))
 
-    def read_portable(self, reader: PortableReader) -> None:
-        self.serial_number = reader.read_string("serialNumber")
-        self.average_bit_temp_10s = reader.read_short("averageBitTemp10s")
-        self.event_time = np.datetime64(reader.read_long("eventTime"), 'ms')
+    def read(self, reader: CompactReader) -> MachineStatus:
+        result = MachineStatus()
+        result.serial_number = reader.read_string("serialNumber")
+        result.average_bit_temp_10s = reader.read_int16("averageBitTemp10s")
+        result.event_time = np.datetime64(reader.read_int64("eventTime"), 'ms')
+        return result
 
-    def get_factory_id(self) -> int:
-        return 1
+    def get_type_name(self) -> str:
+        return "hazelcast.platform.labs.machineshop.domain.MachineStatus"
 
-    def get_class_id(self) -> int:
-        return MachineStatus.ID
-
-
-portable_factory = {MachineStatus.ID: MachineStatus}
+    def get_class(self) -> typing.Type[MachineStatus]:
+        return MachineStatus
 
 
 def get_required_env(name: str) -> str:
@@ -115,11 +115,12 @@ def graph(dataframe):
                    x='event_time',
                    y='average_bit_temp_10s',
                    color='serial_number',
-                   labels = {
+                   labels={
                        'event_time': 'time',
                        'average_bit_temp_10s': 'average bit temp (rolling 10s window)',
                        'serial_number': 'serial number'
                    })
+
 
 # global state
 data_bucket = bucket.Bucket()
@@ -193,9 +194,7 @@ if __name__ == '__main__':
     if viridian.viridian_config_present():
         hz = viridian.configure_from_environment(async_start=False,
                                                  reconnect_mode=ReconnectMode.ON,
-                                                 portable_factories={
-                                                     1: portable_factory
-                                                 })
+                                                 compact_serializers=[MachineStatusSerializer()])
     else:
         hz_cluster_name = get_required_env('HZ_CLUSTER_NAME')
         hz_servers = get_required_env('HZ_SERVERS').split(',')
@@ -204,9 +203,7 @@ if __name__ == '__main__':
             cluster_members=hz_servers,
             async_start=False,
             reconnect_mode=ReconnectMode.ON,
-            portable_factories={
-                1: portable_factory
-            }
+            compact_serializers=[MachineStatusSerializer()]
         )
 
     print('Connected to Hazelcast', flush=True)
