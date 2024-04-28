@@ -51,7 +51,8 @@ services:
       HZ_CLUSTER_NAME: dev 
       MACHINE_COUNT: 10
       KAFKA_BOOTSTRAP_SERVERS: "redpanda:9092"
-      KAFKA_TOPIC: "machine_events"
+      EVENTS_KAFKA_TOPIC: "machine_events"
+      CONTROLS_KAFKA_TOPIC: "machine_controls"
     volumes:
       - ".:/project"
     networks:

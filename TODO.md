@@ -6,5 +6,5 @@
 - [ ] Update event generator to listen on K topic
 - [x] Reimplement pipeline solution
 - [x] Reimplement pipeline skeleton
-- [ ] Re-route the UI to use the machine_aggregates map
+- [X] Re-route the UI to use the machine_status map
 - [x] Update the documentation

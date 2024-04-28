@@ -248,7 +248,22 @@ stream-processing-fundamentals-hz2-1  | 2024-04-25 17:57:10,569 [ INFO] [hz.joll
 Continue building the pipeline following the instructions in `TemperatureMonitorPipeline.java`
 You may want to deploy and cancel the job multiple times while you are building the pipeline. When you are done, look at the UI.  You should be able to tell that your job is now controlling the machines.
 
-image:jobdone.png[job done]
+image:ui.png[UI]
+
+You can also look at the `event_generator` logs and see it responding to
+control messages ...
+
+```
+docker compose logs --follow event_generator
+stream-processing-fundamentals-event_generator-1  | WSY427 went GREEN, resuming normal speed
+stream-processing-fundamentals-event_generator-1  | IWA260 went RED, reducing speed
+stream-processing-fundamentals-event_generator-1  | XTE831 went GREEN, resuming normal speed
+stream-processing-fundamentals-event_generator-1  | ROB293 went GREEN, resuming normal speed
+stream-processing-fundamentals-event_generator-1  | IWA260 went GREEN, resuming normal speed
+stream-processing-fundamentals-event_generator-1  | WSY427 went RED, reducing speed
+stream-processing-fundamentals-event_generator-1  | XTE831 went RED, reducing speed
+
+```
 
 If it did not work right away, there are a couple of things you can inspect to
 help you diagnose and correct the problem.

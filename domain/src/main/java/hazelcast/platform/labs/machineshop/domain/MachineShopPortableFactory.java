@@ -10,8 +10,6 @@ public class MachineShopPortableFactory implements PortableFactory {
             return new MachineProfile();
         else if (classId == PortableHelper.MACHINE_STATUS_ID)
             return new MachineStatus();
-//        else if (classId == StatusServiceResponse.ID)
-//            return new StatusServiceResponse();
         else
             return null;
     }
